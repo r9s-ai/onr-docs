@@ -61,15 +61,36 @@
               "dsl/top-level",
               "dsl/match",
               "dsl/expressions",
-              "dsl/blocks/upstream-config",
-              "dsl/blocks/auth",
-              "dsl/blocks/request",
-              "dsl/blocks/upstream",
-              "dsl/blocks/response",
-              "dsl/blocks/error",
-              "dsl/blocks/metrics",
-              "dsl/blocks/models",
-              "dsl/blocks/balance",
+              {
+                "group": "Blocks",
+                "icon": "layer-group",
+                "expanded": false,
+                "pages": [
+                  {
+                    "group": "Core Flow",
+                    "icon": "route",
+                    "expanded": false,
+                    "pages": [
+                      "dsl/blocks/upstream-config",
+                      "dsl/blocks/auth",
+                      "dsl/blocks/request",
+                      "dsl/blocks/upstream",
+                      "dsl/blocks/response",
+                      "dsl/blocks/error"
+                    ]
+                  },
+                  {
+                    "group": "Data & Metadata",
+                    "icon": "chart-line",
+                    "expanded": false,
+                    "pages": [
+                      "dsl/blocks/metrics",
+                      "dsl/blocks/models",
+                      "dsl/blocks/balance"
+                    ]
+                  }
+                ]
+              },
               "dsl/full-reference"
             ]
           },
