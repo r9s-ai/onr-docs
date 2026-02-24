@@ -1,0 +1,81 @@
+---
+title: "Access Log Fields"
+description: "All supported variables for logging.access_log_format."
+---
+
+ONR access logs support an nginx-like format string via `logging.access_log_format` (or `logging.access_log_format_preset`).
+
+## Formatting rules
+
+- Variables are referenced as `$name` (example: `$status`).
+- If a variable is missing or empty, ONR prints `-` at that position.
+- `$$` renders a literal `$`.
+
+## Configuration
+
+In `onr.yaml`:
+
+```yaml
+logging:
+  access_log: true
+  access_log_path: ""            # empty = stdout
+  access_log_format: ""          # non-empty overrides preset
+  access_log_format_preset: ""   # onr_combined | onr_minimal
+```
+
+## Field reference
+
+**Request line fields**
+
+| Variable | Meaning |
+| --- | --- |
+| `$time_local` | Timestamp formatted as `YYYY/MM/DD - HH:MM:SS`. |
+| `$status` | Downstream HTTP status code returned to the client. |
+| `$latency` | End-to-end request latency as a Go duration string (example: `123ms`, `1.2s`). |
+| `$latency_ms` | End-to-end request latency in milliseconds. If proxy result latency is available, ONR may use it. |
+| `$client_ip` | Client IP as seen by the server. |
+| `$method` | Downstream HTTP method (example: `GET`, `POST`). |
+| `$path` | Downstream request path (URL path only, without query string). |
+
+**Identity and routing**
+
+| Variable | Meaning |
+| --- | --- |
+| `$request_id` | Request ID used for tracing. |
+| `$appname` | Client app name for observability. Resolved from `appname` header or (optional) inferred from `User-Agent`. |
+| `$provider` | Selected provider name (from DSL selection and routing). |
+| `$provider_source` | Provider selection source (for example: forced header vs models routing). |
+| `$api` | Normalized API category (example: `chat.completions`). |
+| `$stream` | Whether the request is treated as streaming (`true`/`false`) when available. |
+| `$model` | Requested/selected model. |
+
+**Usage and cost**
+
+| Variable | Meaning |
+| --- | --- |
+| `$usage_stage` | Where usage data comes from (for example upstream-provided vs best-effort estimation). |
+| `$input_tokens` | Input tokens. |
+| `$output_tokens` | Output tokens. |
+| `$total_tokens` | Total tokens. |
+| `$cache_read_tokens` | Cache read tokens (when available). |
+| `$cache_write_tokens` | Cache write tokens (when available). |
+| `$cost_total` | Total cost. |
+| `$cost_input` | Input cost. |
+| `$cost_output` | Output cost. |
+| `$cost_cache_read` | Cache read cost (when available). |
+| `$cost_cache_write` | Cache write cost (when available). |
+| `$billable_input_tokens` | Billable input tokens (after provider-specific adjustments). |
+| `$cost_multiplier` | Effective multiplier applied to pricing (if configured). |
+| `$cost_model` | Pricing model used for cost calculation. |
+| `$cost_channel` | Channel identifier used for cost attribution (if available). |
+| `$cost_unit` | Cost unit (implementation-defined; depends on pricing config). |
+
+**Upstream and streaming performance**
+
+| Variable | Meaning |
+| --- | --- |
+| `$upstream_status` | Upstream HTTP status code (when an upstream request was made). |
+| `$finish_reason` | Normalized finish reason when extractable. |
+| `$ttft_ms` | Time-to-first-token in milliseconds (streaming). |
+| `$tps` | Tokens per second (streaming), best-effort. |
+

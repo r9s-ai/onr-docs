@@ -12,6 +12,18 @@ ONR emits one-line request logs. Common fields include:
 - upstream (when available): `upstream_status`, `finish_reason`
 - usage/cost (when enabled and extractable): token fields and cost breakdown
 
+See [AppName](/concepts/appname) for how the `appname` field is resolved.
+
+## Dashboards
+
+ONR includes an optional Grafana + Loki + Promtail stack and a prebuilt access-log dashboard.
+
+See [Dashboards](/concepts/dashboards) for setup and notes on label cardinality.
+
+## Access log format
+
+If you use a custom `logging.access_log_format`, see [Access Log Fields](/reference/access-log-fields) for the full variable list and semantics.
+
 ## Traffic dump (file-based)
 
 Enable file-based dumps for debugging:
@@ -29,4 +41,3 @@ Captured sections:
 - `UPSTREAM REQUEST`
 - `UPSTREAM RESPONSE`
 - `PROXY RESPONSE`
-

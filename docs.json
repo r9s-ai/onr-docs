@@ -36,7 +36,7 @@
             "group": "Concepts",
             "icon": "lightbulb",
             "expanded": false,
-            "pages": ["concepts/why-onr", "concepts/architecture", "concepts/observability"]
+            "pages": ["concepts/why-onr", "concepts/architecture", "concepts/appname", "concepts/observability", "concepts/dashboards"]
           },
           {
             "group": "Configuration",
@@ -98,7 +98,7 @@
             "group": "Reference",
             "icon": "book-open",
             "expanded": false,
-            "pages": ["reference/cli", "reference/provider-config"]
+            "pages": ["reference/cli", "reference/onr-admin-cli", "reference/access-log-fields", "reference/provider-config"]
           }
         ]
       }

@@ -1,0 +1,50 @@
+---
+title: "AppName"
+description: "How ONR resolves `appname` for access logs and observability."
+---
+
+`appname` is an optional field in ONR access logs. It is intended for observability: segment traffic by client app/tool without changing routing behavior.
+
+## Resolution order
+
+ONR resolves `appname` for logging in this order:
+
+1. Request header `appname` (trimmed; if non-empty, it always wins)
+2. If enabled, infer from `User-Agent`
+3. Fallback to `logging.appname_infer.unknown` (trimmed). If empty, `appname` is omitted from the log record.
+
+## Enable inference
+
+Configure it in `onr.yaml`:
+
+```yaml
+logging:
+  appname_infer:
+    enabled: true
+    unknown: "unknown-client"
+```
+
+## Inference behavior
+
+Inference is a best-effort substring match against the lowercased `User-Agent`. It returns a normalized app name when it finds a known keyword.
+
+Current builtin keywords include common tools/SDKs such as:
+
+- `claude-code`
+- `cursor`
+- `windsurf`
+- `cline`
+- `aider`
+- `continue`
+- `openai-sdk` (for example `openai-python`, `openai-node`, `openai-go`)
+- `anthropic-sdk`
+
+If you want stable attribution, set the `appname` header explicitly instead of relying on inference.
+
+## Example
+
+```bash
+curl -sS http://127.0.0.1:3300/v1/models \
+  -H "Authorization: Bearer change-me" \
+  -H "appname: my-service"
+```

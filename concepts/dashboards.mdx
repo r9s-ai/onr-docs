@@ -1,0 +1,51 @@
+---
+title: "Dashboards"
+description: "Grafana dashboards for ONR access logs (Promtail + Loki)."
+---
+
+ONR ships an optional, self-contained observability stack based on Promtail + Loki + Grafana, plus a prebuilt dashboard for access logs.
+
+## Start the stack
+
+```bash
+cd deploy/observability
+docker compose up -d
+```
+
+## Access
+
+- Grafana: `http://localhost:3001` (default: `admin/admin`)
+- Loki API: `http://localhost:3100`
+
+## Auto provisioning
+
+This stack provisions everything on startup:
+
+- Grafana datasource `Loki` (uid: `loki`)
+- Dashboard `ONR Access Log Overview` in folder `ONR`
+
+No manual datasource/dashboard import is required.
+
+## Log source
+
+The default Promtail config reads access logs from:
+
+`logs/access.log`
+
+## Labels and cardinality
+
+Promtail extracts structured fields (via `logfmt`) from the `kv` portion of ONR access logs, then promotes a small set of fields to Loki labels.
+
+Default labels include:
+
+- `status`, `method`, `provider`, `api`, `appname`
+
+Keep label cardinality low. Avoid turning high-cardinality fields (for example `request_id`) into labels.
+
+## Stop
+
+```bash
+cd deploy/observability
+docker compose down
+```
+
