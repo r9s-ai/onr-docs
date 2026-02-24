@@ -1,0 +1,16 @@
+---
+title: "API Overview"
+description: "Client-facing endpoints and compatibility model."
+---
+
+ONR provides an OpenAI-style surface area and can also proxy some provider-native endpoints (for example Gemini v1beta).
+
+## Provider selection
+
+- Default: selected by `models.yaml`
+- Override: `x-onr-provider: <provider>`
+
+## Streaming
+
+Streaming responses use `text/event-stream` (SSE). Provider streaming quirks are handled explicitly via DSL response directives (for example `sse_parse`).
+

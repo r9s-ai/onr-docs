@@ -1,0 +1,19 @@
+---
+title: "match"
+description: "How requests select a rule (api + optional stream)."
+---
+
+Supported forms:
+
+```conf
+match api = "<api-name>" stream = true { ... }
+match api = "<api-name>" stream = false { ... }
+match api = "<api-name>" { ... }
+```
+
+Semantics:
+
+- v0.1 matches on `api` and optional `stream`.
+- First match wins (top-to-bottom).
+- If provider is selected but no match is found, ONR rejects with HTTP 400.
+

@@ -1,0 +1,11 @@
+---
+title: "error"
+description: "Map upstream errors to stable client-facing formats."
+---
+
+```conf
+error { error_map openai; }
+```
+
+Allowed modes are whitelist-enforced at load time (for example `openai`, `common`, `passthrough`).
+

@@ -1,0 +1,55 @@
+---
+title: "keys.yaml"
+description: "Upstream keys and client access keys."
+---
+
+## Upstream keys
+
+You can store plaintext keys (not recommended for public repos) or encrypted values.
+
+Encrypted format (AES-256-GCM):
+
+`ENC[v1:aesgcm:<base64(nonce+ciphertext)>]`
+
+To decrypt, set `ONR_MASTER_KEY` (32 bytes or base64-encoded 32 bytes).
+
+Generate an encrypted value:
+
+```bash
+echo -n 'sk-xxxx' | ./bin/onr-admin crypto encrypt
+```
+
+### Env override (recommended)
+
+For each upstream key entry:
+
+- If `name` is set: `ONR_UPSTREAM_KEY_<PROVIDER>_<NAME>`
+- Otherwise: `ONR_UPSTREAM_KEY_<PROVIDER>_<INDEX>` (1-based)
+
+## Access keys (clients)
+
+`keys.yaml` can also contain access keys for clients:
+
+```yaml
+access_keys:
+  - name: "client-a"
+    value: "ak-xxx"
+    comment: "iOS app"
+```
+
+Env override:
+
+- If `name` is set: `ONR_ACCESS_KEY_<NAME>`
+- Otherwise: `ONR_ACCESS_KEY_<INDEX>` (1-based)
+
+## Auth header
+
+Recommended client auth:
+
+- `Authorization: Bearer <ACCESS_KEY_FROM_KEYS_YAML>`
+
+Compatible headers:
+
+- `x-api-key`
+- `x-goog-api-key`
+

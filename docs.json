@@ -15,23 +15,44 @@
         "groups": [
           {
             "group": "Start",
-            "pages": [
-              "index",
-              "getting-started/quickstart"
-            ]
+            "pages": ["index", "getting-started/quickstart", "getting-started/install", "getting-started/run-from-source"]
           },
           {
-            "group": "Guides",
+            "group": "Concepts",
+            "pages": ["concepts/why-onr", "concepts/architecture", "concepts/observability"]
+          },
+          {
+            "group": "Configuration",
+            "pages": ["configuration/onr-yaml", "configuration/keys-yaml", "configuration/models-yaml", "configuration/reload"]
+          },
+          {
+            "group": "API",
+            "pages": ["api/overview", "api/openai-compatible", "api/gemini-native"]
+          },
+          {
+            "group": "DSL",
             "pages": [
-              "guides/dsl-overview"
+              "dsl/overview",
+              "dsl/conventions",
+              "dsl/include",
+              "dsl/top-level",
+              "dsl/match",
+              "dsl/expressions",
+              "dsl/blocks/upstream-config",
+              "dsl/blocks/auth",
+              "dsl/blocks/request",
+              "dsl/blocks/upstream",
+              "dsl/blocks/response",
+              "dsl/blocks/error",
+              "dsl/blocks/metrics",
+              "dsl/blocks/models",
+              "dsl/blocks/balance",
+              "dsl/full-reference"
             ]
           },
           {
             "group": "Reference",
-            "pages": [
-              "reference/cli",
-              "reference/provider-config"
-            ]
+            "pages": ["reference/cli", "reference/provider-config"]
           }
         ]
       }

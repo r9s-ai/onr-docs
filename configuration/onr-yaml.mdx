@@ -1,0 +1,29 @@
+---
+title: "onr.yaml"
+description: "Runtime server config (ports, providers dir, proxies, pricing, traffic dump)."
+---
+
+`onr.yaml` is the main runtime config.
+
+## Common knobs
+
+- Provider DSL directory: `providers.dir` or `ONR_PROVIDERS_DIR`
+- Outbound HTTP proxy per provider: `upstream_proxies.by_provider`
+- OAuth token persistence:
+
+```yaml
+oauth:
+  token_persist:
+    enabled: true
+    dir: "./run/oauth"
+```
+
+## Pricing switch
+
+Runtime cost calculation is controlled globally:
+
+```yaml
+pricing:
+  enabled: true
+```
+

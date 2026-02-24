@@ -1,0 +1,15 @@
+---
+title: "include"
+description: "Reusable fragments via include."
+---
+
+Syntax:
+
+```conf
+include "relative/or/absolute/path.conf";
+```
+
+- Relative paths are resolved against the current file directory.
+- Max recursion depth: 20.
+- Cycles are detected and fail parsing.
+

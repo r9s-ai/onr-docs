@@ -1,0 +1,16 @@
+---
+title: "Expressions"
+description: "Built-in variables and expression gotchas."
+---
+
+Expressions are used by directives like `set_header`, `set_query`, and `model_map_default`.
+
+## Important gotcha
+
+Built-in variables are expanded only when used as bare expressions:
+
+- ✅ `set_query stream $request.stream;`
+- ❌ `set_query stream "$request.stream";` (becomes a literal string)
+
+See the upstream `DSL_SYNTAX.md` for the complete list of built-in variables and functions.
+

@@ -1,0 +1,18 @@
+---
+title: "Conventions"
+description: "Formatting, comments, and file naming rules."
+---
+
+## File conventions
+
+- One provider per file: `config/providers/<provider>.conf`
+- File name must match provider name (case-insensitive match; normalized to lowercase)
+
+## Syntax conventions
+
+- Semicolon `;` is required for every statement
+- Only blocks use `{}`; directives do not
+- Recommended: one directive per line (better diffs)
+
+Comments are supported: `#`, `//`, `/* ... */`.
+

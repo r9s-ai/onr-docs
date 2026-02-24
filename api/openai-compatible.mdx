@@ -1,0 +1,18 @@
+---
+title: "OpenAI-Compatible Endpoints"
+description: "OpenAI-style API paths supported by ONR."
+---
+
+The provider DSL `match api = "<api-name>" { ... }` uses OpenAI-style API names. Common values include:
+
+- `completions`
+- `chat.completions`
+- `responses`
+- `embeddings`
+- `images.generations`
+- `audio.speech`
+- `audio.transcriptions`
+- `audio.translations`
+
+If a provider is selected but no `match` rule is found, ONR rejects the request with HTTP 400 (no silent fallback).
+

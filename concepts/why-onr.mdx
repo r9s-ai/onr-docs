@@ -1,0 +1,16 @@
+---
+title: "Why ONR"
+description: "What ONR is and why the DSL-first approach matters."
+---
+
+Open Next Router (ONR) is a lightweight, DSL-driven LLM gateway that routes requests, applies explicit compatibility transforms, and normalizes behavior across providers and channels.
+
+## Core benefits
+
+- Atomic, nginx-like DSL: behavior is declared in `config/providers/*.conf`.
+- Fast provider onboarding: patch quirks by editing `.conf`, not changing code.
+- Hot reload: reload `onr.yaml` / `keys.yaml` / `models.yaml` / provider DSL via SIGHUP.
+- No hidden magic: transforms are opt-in via directives (for example `req_map`, `resp_map`, `sse_parse`).
+- Streaming-aware normalization: handle SSE framing and provider streaming semantics.
+- Operational visibility: one-line logs with optional usage/cost extraction.
+

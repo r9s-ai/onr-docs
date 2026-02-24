@@ -1,0 +1,30 @@
+---
+title: "Architecture"
+description: "High-level request pipeline and provider selection."
+---
+
+## Request pipeline (simplified)
+
+1. Auth (recommended: `Authorization: Bearer <access-key>`)
+2. Provider selection
+3. DSL execution in phases (`defaults` then selected `match`)
+4. Upstream call and response strategy (passthrough / JSON map / SSE parse)
+5. Optional usage extraction and pricing
+
+## Provider selection priority
+
+1. `x-onr-provider: <provider>` header (force)
+2. `models.yaml` routing (per model round-robin)
+
+## DSL phases (execution engine)
+
+Typical phases:
+
+- `upstream_config`: base URL
+- `auth`: header shape and optional OAuth exchange
+- `request`: header/query/JSON patching, request mapping
+- `upstream`: set upstream path/query
+- `response`: passthrough / resp_map / sse_parse
+- `error`: error_map
+- `metrics`: usage extraction and finish_reason extraction
+

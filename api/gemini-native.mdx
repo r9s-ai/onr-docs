@@ -1,0 +1,21 @@
+---
+title: "Gemini Native API (v1beta)"
+description: "Subset of Gemini native endpoints supported by ONR."
+---
+
+In addition to OpenAI-style endpoints, ONR supports a subset of Gemini native endpoints:
+
+- `POST /v1beta/models/{model}:generateContent`
+- `POST /v1beta/models/{model}:streamGenerateContent` (SSE; `alt=sse` is added if missing)
+- `GET /v1beta/models`
+
+Example (force provider via header):
+
+```bash
+curl -sS http://127.0.0.1:3300/v1beta/models/gemini-2.0-flash:generateContent \
+  -H "Authorization: Bearer change-me" \
+  -H "x-onr-provider: gemini" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"role":"user","parts":[{"text":"hello"}]}]}'
+```
+

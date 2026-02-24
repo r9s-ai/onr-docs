@@ -1,0 +1,12 @@
+---
+title: "models.yaml"
+description: "Model routing and round-robin across providers."
+---
+
+You can bind a model to one or more providers. If a model is bound to multiple providers, ONR selects providers by round-robin per model.
+
+Selection priority:
+
+1. `x-onr-provider` header (force)
+2. `models.yaml` routing (per model round-robin)
+

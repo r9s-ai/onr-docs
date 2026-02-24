@@ -1,0 +1,18 @@
+---
+title: "DSL Overview"
+description: "Nginx-like, atomic DSL for provider behavior."
+---
+
+All runtime behavior is declared explicitly by provider DSL files under `config/providers/*.conf`.
+
+## Key rules
+
+- One provider per file: `config/providers/<provider>.conf`
+- Every statement ends with `;`
+- Only blocks use `{}` (nginx-like)
+- `defaults` applies first; the selected `match` applies afterwards
+
+## Where to look for the full spec
+
+This docs site covers the structure and key semantics. For the complete directive reference, see the upstream repository document `DSL_SYNTAX.md`.
+

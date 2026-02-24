@@ -1,0 +1,20 @@
+---
+title: "Reload"
+description: "Reload ONR configs with SIGHUP (nginx-like)."
+---
+
+Send SIGHUP to reload:
+
+- `onr.yaml`
+- `keys.yaml`
+- `models.yaml`
+- `config/providers/*.conf`
+
+Using the CLI:
+
+```bash
+go run ./cmd/onr --config ./onr.yaml -s reload
+```
+
+This uses `server.pid_file` (default: `/var/run/onr.pid`).
+

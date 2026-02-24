@@ -1,0 +1,33 @@
+---
+title: "auth"
+description: "Declare auth header shape and optional OAuth exchange."
+---
+
+## Bearer auth
+
+```conf
+auth { auth_bearer; }
+```
+
+Effect: `Authorization: Bearer <channel.key>`
+
+## Custom header key
+
+```conf
+auth { auth_header_key "x-api-key"; }
+```
+
+Effect: `<Header-Name>: <channel.key>`
+
+## OAuth exchange + bearer injection
+
+```conf
+auth {
+  oauth_mode openai;
+  oauth_refresh_token $channel.key;
+  auth_oauth_bearer;
+}
+```
+
+Use `custom` mode with explicit `oauth_token_url` and `oauth_form` when builtin modes do not fit.
+

@@ -1,0 +1,22 @@
+---
+title: "upstream"
+description: "Set upstream path/query."
+---
+
+## set_path
+
+```conf
+upstream { set_path "/v1/chat/completions"; }
+```
+
+## set_query / del_query
+
+```conf
+upstream {
+  del_query "foo";
+  set_query stream "true";
+}
+```
+
+Execution order: all `del_query` first, then `set_query`.
+

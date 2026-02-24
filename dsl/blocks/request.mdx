@@ -1,0 +1,42 @@
+---
+title: "request"
+description: "Header ops, model mapping, JSON ops, and req_map."
+---
+
+## Header operations
+
+```conf
+request {
+  set_header "x-trace-id" "trace-123";
+  del_header "x-remove-me";
+}
+```
+
+## Model mapping
+
+```conf
+request {
+  model_map "gpt-4o-mini" "gpt4o-mini-prod";
+  model_map_default $request.model;
+}
+```
+
+## JSON operations
+
+```conf
+request {
+  json_set "$.stream" true;
+  json_set_if_absent "$.instructions" "";
+  json_rename "$.max_tokens" "$.max_completion_tokens";
+  json_del "$.tools";
+}
+```
+
+## req_map (compat request mapping)
+
+```conf
+request { req_map openai_chat_to_anthropic_messages; }
+```
+
+If multiple `req_map` directives are present, the last one wins.
+

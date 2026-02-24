@@ -1,0 +1,26 @@
+---
+title: "models"
+description: "Upstream model listing query (defaults-only in v0.1)."
+---
+
+The `models` block declares how a provider exposes its upstream model listing API and how model IDs are extracted.
+
+```conf
+models {
+  models_mode openai;  # openai|gemini|custom
+}
+```
+
+Custom example:
+
+```conf
+models {
+  models_mode custom;
+  method GET;
+  path "/v1beta/models";
+  id_path "$.models[*].name";
+  id_regex "^models/(.+)$";
+  id_allow_regex "^gemini-";
+}
+```
+

@@ -1,0 +1,32 @@
+---
+title: "response"
+description: "passthrough, resp_map, sse_parse, and JSON ops."
+---
+
+## Choose a response strategy
+
+If multiple directives are present, the last one wins.
+
+- `resp_passthrough;` pass through upstream response
+- `resp_map <mode>;` non-streaming JSON mapping
+- `sse_parse <mode>;` streaming SSE mapping
+
+## Response JSON ops
+
+```conf
+response {
+  json_del "$.usage";
+  json_set "$.foo" "bar";
+}
+```
+
+On `text/event-stream`, JSON ops apply per SSE event's joined `data:` JSON object payload (best-effort).
+
+## SSE conditional delete
+
+```conf
+response {
+  sse_json_del_if "$.type" "message_delta" "$.usage";
+}
+```
+

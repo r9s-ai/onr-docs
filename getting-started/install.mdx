@@ -1,0 +1,35 @@
+---
+title: "Install"
+description: "Install ONR as a service, with Docker, or with Docker Compose."
+---
+
+## One-click install (Linux)
+
+Install the latest runtime release as a systemd service:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/r9s-ai/open-next-router/main/tools/install_onr_service.sh | sudo bash -s -- \
+  --mode service \
+  --api-key 'change-me'
+```
+
+Health check:
+
+```bash
+curl -sS http://127.0.0.1:3300/v1/models -H "Authorization: Bearer change-me"
+```
+
+Other modes:
+
+- Docker: `--mode docker`
+- Docker Compose: `--mode docker-compose`
+
+## Docker Compose (from repo)
+
+```bash
+cp config/onr.example.yaml onr.yaml
+cp config/keys.example.yaml keys.yaml
+cp config/models.example.yaml models.yaml
+docker compose up --build
+```
+

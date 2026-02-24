@@ -1,0 +1,22 @@
+---
+title: "Top-Level Structure"
+description: "syntax, provider, defaults, and match blocks."
+---
+
+```conf
+syntax "next-router/0.1";
+
+provider "openai" {
+  defaults { ... }
+
+  match api = "chat.completions" stream = true { ... }
+  match api = "chat.completions" stream = false { ... }
+  match api = "embeddings" { ... }
+}
+```
+
+Notes:
+
+- `syntax "next-router/0.1";` is a version marker (recommended to keep).
+- `defaults` is applied before the selected `match`.
+
