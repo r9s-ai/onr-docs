@@ -1,13 +1,26 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Open Next Router",
+  "description": "A lightweight, DSL-driven LLM gateway for routing, compatibility transforms, and streaming normalization across providers.",
   "theme": "mint",
   "colors": {
     "primary": "#0B5FFF",
     "light": "#3B82F6",
     "dark": "#1D4ED8"
   },
+  "background": {
+    "decoration": "gradient"
+  },
   "favicon": "/favicon.svg",
+  "navbar": {
+    "links": [
+      { "type": "github", "href": "https://github.com/r9s-ai/open-next-router" },
+      { "label": "Telegram", "href": "https://t.me/opennextrouter" }
+    ]
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
   "navigation": {
     "tabs": [
       {
@@ -15,22 +28,32 @@
         "groups": [
           {
             "group": "Start",
+            "icon": "rocket",
+            "expanded": true,
             "pages": ["index", "getting-started/quickstart", "getting-started/install", "getting-started/run-from-source"]
           },
           {
             "group": "Concepts",
+            "icon": "lightbulb",
+            "expanded": false,
             "pages": ["concepts/why-onr", "concepts/architecture", "concepts/observability"]
           },
           {
             "group": "Configuration",
+            "icon": "sliders",
+            "expanded": false,
             "pages": ["configuration/onr-yaml", "configuration/keys-yaml", "configuration/models-yaml", "configuration/reload"]
           },
           {
             "group": "API",
+            "icon": "plug",
+            "expanded": false,
             "pages": ["api/overview", "api/openai-compatible", "api/gemini-native"]
           },
           {
             "group": "DSL",
+            "icon": "code",
+            "expanded": false,
             "pages": [
               "dsl/overview",
               "dsl/conventions",
@@ -52,6 +75,8 @@
           },
           {
             "group": "Reference",
+            "icon": "book-open",
+            "expanded": false,
             "pages": ["reference/cli", "reference/provider-config"]
           }
         ]
