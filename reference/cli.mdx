@@ -1,0 +1,27 @@
+---
+title: "CLI Reference"
+description: "Main ONR CLI commands and usage."
+---
+
+## Commands
+
+### `onr run`
+
+Run the ONR runtime server.
+
+```bash
+./bin/onr run -c onr.yaml
+```
+
+### `onr test`
+
+Parse and validate runtime and provider configs.
+
+```bash
+./bin/onr test -c onr.yaml
+```
+
+## Notes
+
+- Keep provider behavior in DSL files under `config/providers/*.conf`.
+- Use `onr test` in CI before deployment.

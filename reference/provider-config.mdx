@@ -1,0 +1,27 @@
+---
+title: "Provider Config"
+description: "How to structure and validate provider configs."
+---
+
+## Location
+
+Provider config files are under:
+
+```text
+config/providers/*.conf
+```
+
+## Rules
+
+- Keep behavior explicit and atomic in DSL directives.
+- Avoid runtime implicit compatibility rules.
+- Validate the full providers directory in tests.
+
+## Change Checklist
+
+When adding/modifying directives:
+
+1. Add parser support in `onr-core/pkg/dslconfig/parse_*.go`
+2. Add validation constraints in `onr-core/pkg/dslconfig/validate.go`
+3. Update `DSL_SYNTAX.md`
+4. Add/adjust tests in `onr-core/pkg/dslconfig/*_test.go`
