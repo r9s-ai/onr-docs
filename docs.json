@@ -15,7 +15,8 @@
   "navbar": {
     "links": [
       { "type": "github", "href": "https://github.com/r9s-ai/open-next-router" },
-      { "label": "Telegram", "href": "https://t.me/opennextrouter" }
+      { "label": "Telegram", "href": "https://t.me/opennextrouter" },
+      { "type": "discord", "href": "https://discord.gg/HBM67dP8" }
     ]
   },
   "contextual": {
