@@ -25,11 +25,10 @@ go run ./cmd/onr -t -c ./onr.yaml
 
 ## Reload (nginx-like)
 
-After editing `onr.yaml` / `keys.yaml` / `models.yaml` / `config/providers/*.conf`:
+After editing `onr.yaml` / `keys.yaml` / `models.yaml` / `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)):
 
 ```bash
 go run ./cmd/onr --config ./onr.yaml -s reload
 ```
 
 This uses `server.pid_file` (default: `/var/run/onr.pid`).
-

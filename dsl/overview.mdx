@@ -3,11 +3,11 @@ title: "DSL Overview"
 description: "Nginx-like, atomic DSL for provider behavior."
 ---
 
-All runtime behavior is declared explicitly by provider DSL files under `config/providers/*.conf`.
+All runtime behavior is declared explicitly by provider DSL files under `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)).
 
 ## Key rules
 
-- One provider per file: `config/providers/<provider>.conf`
+- One provider per file: `config/providers/<provider>.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers))
 - Every statement ends with `;`
 - Only blocks use `{}` (nginx-like)
 - `defaults` applies first; the selected `match` applies afterwards
@@ -15,4 +15,3 @@ All runtime behavior is declared explicitly by provider DSL files under `config/
 ## Where to look for the full spec
 
 This docs site covers the structure and key semantics. For the complete directive reference, see the upstream repository document `DSL_SYNTAX.md`.
-
