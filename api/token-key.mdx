@@ -1,0 +1,84 @@
+---
+title: "Token Key (onr:v1?)"
+description: "Single-key auth format for clients that cannot set custom headers."
+---
+
+Token Key is an authentication format designed for clients that can only supply a single API key value and cannot add extra headers.
+
+You send it as:
+
+`Authorization: Bearer onr:v1?...`
+
+## When to use
+
+- Your client can only configure a single key field (no extra headers)
+- You still want ONR access-key auth, plus optional provider/model pinning
+- You want an opt-in BYOK path (use an upstream key supplied by the client)
+
+If your client can send headers normally, prefer a plain access key:
+
+`Authorization: Bearer <ACCESS_KEY>`
+
+## Format
+
+Token Key is a URI-like string:
+
+- `onr:v1?k=<ACCESS_KEY>&...`
+- `onr:v1?k64=<base64url(ACCESS_KEY)>&...` (recommended)
+
+`ACCESS_KEY` must match a client access key from `keys.yaml` (`access_keys[].value`), after env override and optional decryption.
+
+## Query parameters
+
+| Param | Required | Meaning |
+| --- | --- | --- |
+| `k` | yes (or `k64`) | Access key (plaintext). |
+| `k64` | yes (or `k`) | Access key encoded as base64url. Recommended to avoid URL escaping issues. |
+| `p` | no | Force provider selection (bypasses normal provider routing). |
+| `m` | no | Force model override. When present, ONR enforces it (replaces the request model). |
+| `uk` | no | BYOK upstream key (plaintext). When present, ONR uses it directly for upstream calls. |
+| `uk64` | no | BYOK upstream key encoded as base64url. Recommended to avoid URL escaping issues. |
+
+## Examples
+
+Force provider:
+
+`onr:v1?k64=...&p=openai`
+
+Force model:
+
+`onr:v1?k64=...&m=gpt-4o-mini`
+
+BYOK + provider + forced model (plaintext upstream key):
+
+`onr:v1?k64=...&p=openai&uk=sk-xxx&m=gpt-4o-mini`
+
+BYOK + provider + forced model (base64url upstream key):
+
+`onr:v1?k64=...&p=openai&uk64=...&m=gpt-4o-mini`
+
+## Generate token keys
+
+Use `onr-admin`:
+
+```bash
+make build
+./bin/onr-admin token create \
+  --config ./onr.yaml \
+  --access-key-name client-a \
+  --provider openai \
+  --model gpt-4o-mini
+```
+
+See [onr-admin CLI](/reference/onr-admin-cli) for more commands.
+
+## Security notes
+
+- Token Key is intentionally editable (no signature). Treat it like a bearer secret.
+- Avoid putting plaintext secrets into URLs when possible. Prefer `k64` / `uk64` to reduce accidental escaping/logging issues, but note they are still secrets.
+- If you enable BYOK (`uk` / `uk64`), clients can supply their own upstream key. Consider whether that is acceptable for your deployment and logging policy.
+
+## More details
+
+The repository also contains a Chinese deep dive: `docs/ACCESS_KEYS_CN.md`.
+

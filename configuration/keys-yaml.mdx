@@ -42,6 +42,14 @@ Env override:
 - If `name` is set: `ONR_ACCESS_KEY_<NAME>`
 - Otherwise: `ONR_ACCESS_KEY_<INDEX>` (1-based)
 
+## Token Key (single-key clients)
+
+If your client cannot add custom headers and can only provide a single API key value, use Token Key:
+
+- `Authorization: Bearer onr:v1?...`
+
+See [Token Key (onr:v1?)](/api/token-key) for the full format and parameters.
+
 ## Auth header
 
 Recommended client auth:
@@ -52,4 +60,3 @@ Compatible headers:
 
 - `x-api-key`
 - `x-goog-api-key`
-

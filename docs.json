@@ -42,13 +42,18 @@
             "group": "Configuration",
             "icon": "sliders",
             "expanded": false,
-            "pages": ["configuration/onr-yaml", "configuration/keys-yaml", "configuration/models-yaml", "configuration/reload"]
+            "pages": [
+              "configuration/onr-yaml",
+              "configuration/keys-yaml",
+              "configuration/models-yaml",
+              "configuration/reload"
+            ]
           },
           {
             "group": "API",
             "icon": "plug",
             "expanded": false,
-            "pages": ["api/overview", "api/openai-compatible", "api/gemini-native"]
+            "pages": ["api/overview", "api/token-key", "api/openai-compatible", "api/gemini-native"]
           },
           {
             "group": "DSL",
