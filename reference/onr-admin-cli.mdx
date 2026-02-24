@@ -9,7 +9,7 @@ description: "Admin tooling for tokens, crypto, validation, pricing, balance, OA
 
 ```bash
 make build
-./bin/onr-admin --help
+onr-admin --help
 ```
 
 ## Commands
@@ -19,7 +19,7 @@ make build
 Generate a token key in the form of `onr:v1?...` for clients that cannot set custom headers.
 
 ```bash
-./bin/onr-admin token create --config ./onr.yaml --access-key-name client-a -p openai -m gpt-4o-mini
+onr-admin token create --config ./onr.yaml --access-key-name client-a -p openai -m gpt-4o-mini
 ```
 
 See [Token Key (onr:v1?)](/api/token-key) for the full request format and supported parameters.
@@ -29,9 +29,9 @@ See [Token Key (onr:v1?)](/api/token-key) for the full request format and suppor
 Encryption and master key helpers.
 
 ```bash
-./bin/onr-admin crypto encrypt --text 'sk-xxxx'
-./bin/onr-admin crypto encrypt-keys --config ./onr.yaml
-./bin/onr-admin crypto gen-master-key --export
+onr-admin crypto encrypt --text 'sk-xxxx'
+onr-admin crypto encrypt-keys --config ./onr.yaml
+onr-admin crypto gen-master-key --export
 ```
 
 ### validate
@@ -39,7 +39,7 @@ Encryption and master key helpers.
 Validate config files.
 
 ```bash
-./bin/onr-admin validate all --config ./onr.yaml
+onr-admin validate all --config ./onr.yaml
 ```
 
 ### balance
@@ -47,9 +47,9 @@ Validate config files.
 Query upstream balance using the providers DSL registry.
 
 ```bash
-./bin/onr-admin balance get --config ./onr.yaml -p openai
-./bin/onr-admin balance get --config ./onr.yaml --providers openai,openrouter,deepseek
-./bin/onr-admin balance get --config ./onr.yaml --all
+onr-admin balance get --config ./onr.yaml -p openai
+onr-admin balance get --config ./onr.yaml --providers openai,openrouter,deepseek
+onr-admin balance get --config ./onr.yaml --all
 ```
 
 ### pricing
@@ -57,9 +57,9 @@ Query upstream balance using the providers DSL registry.
 Sync model pricing into `price.yaml` from `models.dev`.
 
 ```bash
-./bin/onr-admin pricing providers
-./bin/onr-admin pricing sync --config ./onr.yaml --out ./price.yaml
-./bin/onr-admin pricing sync -p openai --models gpt-4o-mini,gpt-4o --out ./price.yaml
+onr-admin pricing providers
+onr-admin pricing sync --config ./onr.yaml --out ./price.yaml
+onr-admin pricing sync -p openai --models gpt-4o-mini,gpt-4o --out ./price.yaml
 ```
 
 ### oauth
@@ -67,8 +67,8 @@ Sync model pricing into `price.yaml` from `models.dev`.
 Get OAuth `refresh_token` for a selected provider profile.
 
 ```bash
-./bin/onr-admin oauth refresh-token --provider openai
-./bin/onr-admin oauth refresh-token --provider openai --no-browser --callback-port 2468
+onr-admin oauth refresh-token --provider openai
+onr-admin oauth refresh-token --provider openai --no-browser --callback-port 2468
 ```
 
 ### tui
@@ -76,7 +76,7 @@ Get OAuth `refresh_token` for a selected provider profile.
 Open the interactive TUI (traffic dump viewer).
 
 ```bash
-./bin/onr-admin tui --config ./onr.yaml
+onr-admin tui --config ./onr.yaml
 ```
 
 ## Full usage
