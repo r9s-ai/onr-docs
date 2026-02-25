@@ -8,6 +8,7 @@ description: "Runtime server config (ports, providers dir, proxies, pricing, tra
 ## Common knobs
 
 - Provider DSL directory: `providers.dir` or `ONR_PROVIDERS_DIR`
+- Provider DSL auto-reload (file watch, opt-in): `providers.auto_reload.enabled`
 - Outbound HTTP proxy per provider: `upstream_proxies.by_provider`
 - OAuth token persistence:
 
@@ -18,6 +19,23 @@ oauth:
     dir: "./run/oauth"
 ```
 
+## Provider Auto Reload
+
+Disabled by default. When enabled, ONR watches `providers.dir` and automatically reloads provider DSL files.
+
+```yaml
+providers:
+  dir: "./config/providers"
+  auto_reload:
+    enabled: true
+    debounce_ms: 300
+```
+
+Environment overrides:
+
+- `ONR_PROVIDERS_AUTO_RELOAD_ENABLED`
+- `ONR_PROVIDERS_AUTO_RELOAD_DEBOUNCE_MS`
+
 ## Pricing switch
 
 Runtime cost calculation is controlled globally:
@@ -26,4 +44,3 @@ Runtime cost calculation is controlled globally:
 pricing:
   enabled: true
 ```
-

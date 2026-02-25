@@ -17,3 +17,14 @@ go run ./cmd/onr --config ./onr.yaml -s reload
 ```
 
 This uses `server.pid_file` (default: `/var/run/onr.pid`).
+
+Optional provider-only auto reload (disabled by default):
+
+```yaml
+providers:
+  auto_reload:
+    enabled: true
+    debounce_ms: 300
+```
+
+When enabled, ONR watches `providers.dir` and reloads provider DSL files automatically.
