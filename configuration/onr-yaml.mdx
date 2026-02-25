@@ -9,6 +9,7 @@ description: "Runtime server config (ports, providers dir, proxies, pricing, tra
 
 - Provider DSL directory: `providers.dir` or `ONR_PROVIDERS_DIR`
 - Provider DSL auto-reload (file watch, opt-in): `providers.auto_reload.enabled`
+- Token key BYOK-without-k switch: `auth.token_key.allow_byok_without_k`
 - Outbound HTTP proxy per provider: `upstream_proxies.by_provider`
 - OAuth token persistence:
 
@@ -17,6 +18,12 @@ oauth:
   token_persist:
     enabled: true
     dir: "./run/oauth"
+```
+
+```yaml
+auth:
+  token_key:
+    allow_byok_without_k: false
 ```
 
 ## Provider Auto Reload

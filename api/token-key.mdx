@@ -32,12 +32,22 @@ Token Key is a URI-like string:
 
 | Param | Required | Meaning |
 | --- | --- | --- |
-| `k` | yes (or `k64`) | Access key (plaintext). |
-| `k64` | yes (or `k`) | Access key encoded as base64url. Recommended to avoid URL escaping issues. |
+| `k` | yes (or `k64`) by default | Access key (plaintext). |
+| `k64` | yes (or `k`) by default | Access key encoded as base64url. Recommended to avoid URL escaping issues. |
 | `p` | no | Force provider selection (bypasses normal provider routing). |
 | `m` | no | Force model override. When present, ONR enforces it (replaces the request model). |
 | `uk` | no | BYOK upstream key (plaintext). When present, ONR uses it directly for upstream calls. |
 | `uk64` | no | BYOK upstream key encoded as base64url. Recommended to avoid URL escaping issues. |
+
+If you explicitly enable:
+
+```yaml
+auth:
+  token_key:
+    allow_byok_without_k: true
+```
+
+then BYOK token keys with only `uk` / `uk64` are allowed.
 
 ## Examples
 
@@ -81,4 +91,3 @@ See [onr-admin CLI](/reference/onr-admin-cli) for more commands.
 ## More details
 
 The repository also contains a Chinese deep dive: `docs/ACCESS_KEYS_CN.md`.
-
