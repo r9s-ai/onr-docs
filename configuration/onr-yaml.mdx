@@ -51,3 +51,64 @@ Runtime cost calculation is controlled globally:
 pricing:
   enabled: true
 ```
+
+## Access Log Rotation
+
+Built-in access log rotation is optional and disabled by default.
+
+```yaml
+logging:
+  access_log: true
+  access_log_path: "./logs/access.log"
+  access_log_rotate:
+    enabled: true
+    max_size_mb: 100
+    max_backups: 14
+    max_age_days: 14
+    compress: false
+```
+
+Rules:
+
+- `logging.access_log_rotate.enabled=true` requires:
+  - `logging.access_log=true`
+  - non-empty `logging.access_log_path`
+- Rotation triggers when either:
+  - local day changes, or
+  - file size would exceed `max_size_mb`.
+
+Knob semantics:
+
+- `max_size_mb`: rotate when the next write would exceed this size.
+- `max_backups`: keep only the newest N archives.
+- `max_age_days`: remove archives older than N days; `0` means no age-based cleanup.
+- `compress`: gzip archives after rotation.
+
+Archive naming:
+
+- `<access_log_path>.YYYYMMDD-HHMMSS.NNNNNNNNN`
+- With compression: same file name plus `.gz`
+
+Daily-first example:
+
+```yaml
+logging:
+  access_log: true
+  access_log_path: "./logs/access.log"
+  access_log_rotate:
+    enabled: true
+    max_size_mb: 102400
+    max_backups: 14
+    max_age_days: 14
+    compress: false
+```
+
+This keeps size-triggered rotation unlikely for normal traffic while retaining day-boundary rotation.
+
+Environment overrides:
+
+- `ONR_ACCESS_LOG_ROTATE_ENABLED`
+- `ONR_ACCESS_LOG_ROTATE_MAX_SIZE_MB`
+- `ONR_ACCESS_LOG_ROTATE_MAX_BACKUPS`
+- `ONR_ACCESS_LOG_ROTATE_MAX_AGE_DAYS`
+- `ONR_ACCESS_LOG_ROTATE_COMPRESS`

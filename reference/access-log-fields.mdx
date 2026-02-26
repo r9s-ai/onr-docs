@@ -21,7 +21,45 @@ logging:
   access_log_path: ""            # empty = stdout
   access_log_format: ""          # non-empty overrides preset
   access_log_format_preset: ""   # onr_combined | onr_minimal
+  access_log_rotate:
+    enabled: false
+    max_size_mb: 100
+    max_backups: 14
+    max_age_days: 14
+    compress: false
 ```
+
+Rotation notes:
+
+- Rotation only applies when `access_log_path` is non-empty (file output).
+- When `access_log_rotate.enabled=true`, `access_log_path` is required.
+- Rotation triggers on either day boundary (local time) or size threshold.
+- Archive file pattern: `<access_log_path>.YYYYMMDD-HHMMSS.NNNNNNNNN` (or `.gz` when `compress=true`).
+
+Rotation knobs:
+
+- `max_size_mb`: rotate when the next write would exceed this file size.
+- `max_backups`: keep only the newest N archives.
+- `max_age_days`: remove archives older than N days; `0` disables age-based cleanup.
+- `compress`: gzip archive files after rotation.
+
+Daily-first setup example:
+
+```yaml
+logging:
+  access_log: true
+  access_log_path: "./logs/access.log"
+  access_log_rotate:
+    enabled: true
+    max_size_mb: 102400   # keep very large if you want day-boundary rotation to dominate
+    max_backups: 14
+    max_age_days: 14
+    compress: false
+```
+
+Note:
+
+- Current behavior is `day-boundary OR size-threshold` (not an exclusive mode switch).
 
 ## Field reference
 
@@ -78,4 +116,3 @@ logging:
 | `$finish_reason` | Normalized finish reason when extractable. |
 | `$ttft_ms` | Time-to-first-token in milliseconds (streaming). |
 | `$tps` | Tokens per second (streaming), best-effort. |
-
