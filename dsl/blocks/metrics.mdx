@@ -1,33 +1,65 @@
 ---
-title: "metrics"
-description: "Usage and finish_reason extraction for observability and pricing."
+title: "Metrics Block"
+description: "Extracting tokens and finish reasons for pricing."
 ---
 
-## usage_extract
+To track token usage, enforce quotas, and build accurate dashboards, ONR needs to parse token counts and finish reasons accurately from upstream responses. Different providers place these values in different locations.
 
-```conf
+## Usage Extraction modes
+
+The `usage_extract` directive applies native parsing strategies tailored to standard provider schemas:
+
+```nginx
 metrics { usage_extract openai; }
 metrics { usage_extract anthropic; }
 metrics { usage_extract gemini; }
-metrics { usage_extract custom; }
 ```
 
-For `custom`, you can set JSONPath fields like:
+### Custom Token Extraction
 
-```conf
+If a provider hides tokens in a weird JSON path, you can map them dynamically.
+
+```nginx
 metrics {
   usage_extract custom;
+  
   input_tokens_path "$.usage.input_tokens";
   output_tokens_path "$.usage.output_tokens";
+  
+  # For sophisticated caching insights
+  cache_read_tokens_path "$.usage.cache_read_input_tokens";
+  cache_write_tokens_path "$.usage.cache_creation_input_tokens";
 }
 ```
 
-## finish_reason_extract
+You can use the `$.items[*].x` JSONPath syntax to sum all numeric occurrences in an array.
 
-```conf
-metrics { finish_reason_extract openai; }
-metrics { finish_reason_extract custom; finish_reason_path "$.choices[0].finish_reason"; }
+## Formula & Arithmetic Configuration
+
+Alternatively, you can compute tokens dynamically based on math equations rather than strictly passing the exact path.
+
+```nginx
+metrics {
+  input_tokens_expr = "$.usage.in";
+  output_tokens_expr = "$.usage.out";
+  
+  # Total defaults to input + output automatically, 
+  # or you can override it:
+  total_tokens_expr = "$.usage.total";
+}
 ```
 
-Pricing is controlled globally by `onr.yaml` (`pricing.enabled`).
+## Finish Reason Extraction
 
+Similar to usage Extraction, you can instruct ONR where to look for the "stop" string (e.g. `stop`, `length`, `tool_calls`) indicating why generation ceased.
+
+```nginx
+metrics { finish_reason_extract openai; }
+metrics { finish_reason_extract anthropic; }
+
+# Custom location override:
+metrics {
+  finish_reason_extract custom; 
+  finish_reason_path "$.choices[0].finish_reason"; 
+}
+```

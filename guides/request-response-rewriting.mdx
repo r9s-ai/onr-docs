@@ -1,0 +1,73 @@
+---
+title: "Request/Response Rewriting"
+description: "Modify headers, parameters, and JSON payloads inflight."
+---
+
+Open Next Router's DSL allows you to execute precise surgical strikes on HTTP requests and responses as they flow through the proxy, without writing any compiled middleware.
+
+This Cookbook covers common scenarios you might encounter when wrangling unruly prompts or mapping incompatible vendor schemas.
+
+## Header Injection & Stripping
+
+Often, you must attach trailing analytics IDs, specific user-agent strings, or strip out sensitive Origin headers that your clients send.
+
+```nginx
+request {
+  # Add tracing
+  set_header "x-correlation-id" $request.model_mapped;
+  
+  # Delete headers your client sent that the upstream might reject
+  del_header "x-forwarded-for";
+}
+```
+
+## Forcing Parameters (JSON Payload Manipulation)
+
+If you want to enforce rules on your users (for instance, forcing a strict token limit, or ensuring a predictable temperature), you can mutate the JSON body dynamically.
+
+```nginx
+request {
+  # Force temperature to 0.7 regardless of what the user requested
+  json_set "$.temperature" 0.7;
+  
+  # Set a default max_tokens only if the user didn't provide one
+  json_set_if_absent "$.max_tokens" 2048;
+  
+  # Stop clients from using function calling (remove the tools array)
+  json_del "$.tools";
+}
+```
+
+## Cross-Provider Schema Mapping
+
+One of ONR's superpowers is translating an OpenAI-formatted `chat.completions` array into a format understood by Google Gemini or Anthropic Claude, and seamlessly re-mapping the response back instantly.
+
+To do this, simply use the `req_map` and `resp_map` directives.
+
+```nginx
+# config/providers/anthropic.conf
+match api = "chat.completions" stream = true {
+  request {
+    # 1. Translate upstream: OpenAI Array -> Anthropic Messages
+    req_map openai_chat_to_anthropic_messages;
+  }
+  
+  response {
+    # 2. Translate downstream: Anthropic SSE chunks -> OpenAI SSE chunks
+    sse_parse anthropic_to_openai_chunks;
+  }
+}
+```
+
+## Filtering Streaming Chunk Metadata
+
+Sometimes, providers leak verbose metadata inside Server-Sent Event (SSE) streams that you decide isn't useful for the client to parse, wasting bandwidth.
+
+You can selectively strip fields from *specific streaming events* using conditional logic:
+
+```nginx
+response {
+  # If the chunk type is "message_delta", remove the "usage" object
+  sse_json_del_if "$.type" "message_delta" "$.usage";
+}
+```

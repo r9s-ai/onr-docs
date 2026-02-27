@@ -14,13 +14,27 @@
   "favicon": "/favicon.svg",
   "navbar": {
     "links": [
-      { "type": "github", "href": "https://github.com/r9s-ai/open-next-router" },
-      { "label": "Telegram", "href": "https://t.me/opennextrouter" },
-      { "type": "discord", "href": "https://discord.gg/HBM67dP8" }
+      {
+        "type": "github",
+        "href": "https://github.com/r9s-ai/open-next-router"
+      },
+      {
+        "label": "Telegram",
+        "href": "https://t.me/opennextrouter"
+      },
+      {
+        "type": "discord",
+        "href": "https://discord.gg/HBM67dP8"
+      }
     ]
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   },
   "navigation": {
     "tabs": [
@@ -31,13 +45,34 @@
             "group": "Start",
             "icon": "rocket",
             "expanded": true,
-            "pages": ["index", "getting-started/quickstart", "getting-started/install", "getting-started/run-from-source"]
+            "pages": [
+              "index",
+              "getting-started/quickstart",
+              "getting-started/install",
+              "getting-started/run-from-source"
+            ]
           },
           {
-            "group": "Concepts",
-            "icon": "lightbulb",
+            "group": "Guides & Cookbooks",
+            "icon": "book-open-reader",
             "expanded": false,
-            "pages": ["concepts/why-onr", "concepts/architecture", "concepts/appname", "concepts/observability", "concepts/dashboards"]
+            "pages": [
+              "guides/load-balancing",
+              "guides/auth-setup",
+              "guides/request-response-rewriting",
+              "guides/logging-masking",
+              "guides/client-attribution"
+            ]
+          },
+          {
+            "group": "Ecosystem & Tools",
+            "icon": "toolbox",
+            "expanded": false,
+            "pages": [
+              "ecosystem/admin-panel",
+              "ecosystem/onr-lsp",
+              "ecosystem/observability"
+            ]
           },
           {
             "group": "Configuration",
@@ -54,7 +89,12 @@
             "group": "API",
             "icon": "plug",
             "expanded": false,
-            "pages": ["api/overview", "api/token-key", "api/openai-compatible", "api/gemini-native"]
+            "pages": [
+              "api/overview",
+              "api/token-key",
+              "api/openai-compatible",
+              "api/gemini-native"
+            ]
           },
           {
             "group": "DSL",
@@ -96,15 +136,40 @@
                     ]
                   }
                 ]
-              },
-              "dsl/full-reference"
+              }
+            ]
+          },
+          {
+            "group": "Concepts & Design",
+            "icon": "lightbulb",
+            "expanded": false,
+            "pages": [
+              "concepts/why-onr",
+              "concepts/architecture",
+              "concepts/request-lifecycle",
+              "concepts/observability",
+              "concepts/dashboards"
             ]
           },
           {
             "group": "Reference",
             "icon": "book-open",
             "expanded": false,
-            "pages": ["reference/cli", "reference/onr-admin-cli", "reference/access-log-fields", "reference/provider-config"]
+            "pages": [
+              "reference/cli",
+              "reference/access-log-fields"
+            ]
+          },
+          {
+            "group": "Community & Contributing",
+            "icon": "users",
+            "expanded": false,
+            "pages": [
+              "contributing/development-guide",
+              "contributing/testing-guide",
+              "contributing/release-process",
+              "contributing/writing-providers"
+            ]
           }
         ]
       }

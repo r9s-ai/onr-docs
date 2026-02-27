@@ -1,26 +1,48 @@
 ---
-title: "models"
-description: "Upstream model listing query (defaults-only in v0.1)."
+title: "Models Block"
+description: "Configuring dynamic model listings."
 ---
 
-The `models` block declares how a provider exposes its upstream model listing API and how model IDs are extracted.
+The `models` block (available inside `defaults` blocks only in v0.1) controls how ONR queries and parses the `GET /v1/models` endpoint of an upstream provider to populate its internal registry or Admin Page proxy.
 
-```conf
+## Built-In Handlers
+
+You can rely on built-in parser presets for standard providers:
+
+```nginx
 models {
-  models_mode openai;  # openai|gemini|custom
+  models_mode openai;    # Default query path: /v1/models
 }
 ```
 
-Custom example:
+```nginx
+models {
+  models_mode gemini;    # Default query path: /v1beta/models
+}
+```
 
-```conf
+## Custom Model Parsers
+
+For providers exposing bizarre schemas or prefixed namespaces, build a custom parser to extract and clean the model lists explicitly.
+
+```nginx
 models {
   models_mode custom;
   method GET;
   path "/v1beta/models";
+  
+  # Locate the array of models
   id_path "$.models[*].name";
+  
+  # Perform a regex rewrite on the returned model names
+  # (e.g., stripping off 'models/' prefix from the string)
   id_regex "^models/(.+)$";
+  
+  # Only allow models out that begin with "gemini-"
   id_allow_regex "^gemini-";
 }
 ```
 
+### Directives specific to `models_mode custom`
+- `id_path` (repeatable): Extracts variables into a deduplicated union list.
+- `id_regex`: If it includes a Capture Group, group `1` becomes the final ID. Otherwise, the full Regex Match is used. Non-matching values are dropped.

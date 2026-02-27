@@ -1,0 +1,62 @@
+---
+title: "Logging and Masking"
+description: "Redacting sensitive user data in production."
+---
+
+When building enterprise applications on top of LLMs, data privacy and compliance (e.g., GDPR, HIPAA, or SOC2) are paramount. 
+
+By default, an observability and debugging stack might log full prompt payloads, which can inadvertently capture PII (Personally Identifiable Information) or proprietary internal secrets. 
+
+Open Next Router gives you the flexibility to sanitize traffic at the DSL level so that downstream sinks never see the raw payloads.
+
+## Redacting Headers
+
+If clients are passing sensitive authorization tokens or internal identities in custom headers, you should drop them before the request hits the network egress or the traffic dump logger.
+
+```nginx
+request {
+  # Strip out client-identifying correlation IDs
+  del_header "X-Client-Trace-Id";
+  
+  # Strip out any downstream Auth headers you don't want logged or forwarded
+  del_header "Authorization";
+}
+```
+
+*(Note: ONR evaluates the downstream `Authorization` header to route the request before executing these `del_header` directives, so deleting it here is safe from a routing perspective and ensures it is stripped from upstream egress).*
+
+## Obfuscating JSON Payloads
+
+If you are dumping traffic logs (`traffic_dump.enabled=true` in your `onr.yaml`) to debug upstream interactions, you might want to mask or entirely delete the actual prompt content (`messages`) while continuing to trace the rest of the metadata (like temperature, max tokens, and usage).
+
+Use the `json_del` directive to scrub sensitive arrays:
+
+```nginx
+request {
+  # Completely removes the conversational prompt history
+  json_del "$.messages";
+}
+
+response {
+  # Remove the generated response text from the return log
+  json_del "$.choices";
+}
+```
+
+### Selective Anonymization
+
+Instead of deleting the entire `messages` array, you might want to replace a specific explicit field with a static "[REDACTED]" string flag. 
+
+```nginx
+request {
+  # Assume your client passes a special identifying parameter
+  json_set "$.user_id" "ANONYMOUS_USER";
+}
+```
+
+<Warning>
+  **Important Note on Analytics:** 
+  Keep in mind that if you actively use `json_del` or `json_set` to scrub `messages` or content strings, this mutation affects the actual HTTP request sent to the provider. 
+  
+  Currently, `json_del` is applied universally to the inflight payload. If you strip the prompt, the upstream LLM will receive an empty prompt! To solve this, pure log-masking (masking out of logs but retaining the payload for the request) is configured natively via your Datadog or Loki ingestion parsers. Always rely on observability-side redaction (via Promtail/Loki filters) if the data is absolutely required for the LLM inference.
+</Warning>

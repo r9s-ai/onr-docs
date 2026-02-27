@@ -1,15 +1,18 @@
 ---
-title: "include"
-description: "Reusable fragments via include."
+title: "Include Directive"
+description: "Reusing configuration fragments."
 ---
 
-Syntax:
+If you have common configuration blocks (like standard auth headers, or shared metrics extraction), you can break them out into separate files and include them using the `include` directive.
 
-```conf
+## Syntax
+
+```nginx
 include "relative/or/absolute/path.conf";
 ```
 
-- Relative paths are resolved against the current file directory.
-- Max recursion depth: 20.
-- Cycles are detected and fail parsing.
+### Rules
 
+- Relative paths are resolved against the directory where the current file is located.
+- **Max recursion depth**: `20`.
+- **Cyclic imports**: Cycles are detected automatically. A cyclic include will fail the parser for that specific provider, preventing infinite loops.

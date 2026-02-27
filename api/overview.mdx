@@ -1,16 +1,34 @@
 ---
 title: "API Overview"
-description: "Client-facing endpoints and compatibility model."
+description: "Interface specifications and routing conventions for ONR."
 ---
 
-ONR provides an OpenAI-style surface area and can also proxy some provider-native endpoints (for example Gemini v1beta).
+Open Next Router is fundamentally designed to provide an **OpenAI-compatible** surface area for any downstream client, while managing the complexity of routing those requests to arbitrary providers behind the scenes.
 
-## Provider selection
+## Core API Contract
 
-- Default: selected by `models.yaml`
-- Override: `x-onr-provider: <provider>`
+Clients interacting with ONR should generally assume they are talking to a standard OpenAI completion, chat, or embedding endpoint. ONR sits in the middle and parses the standard shape:
 
-## Streaming
+- `POST /v1/chat/completions`
+- `POST /v1/embeddings`
+- `GET /v1/models`
 
-Streaming responses use `text/event-stream` (SSE). Provider streaming quirks are handled explicitly via DSL response directives (for example `sse_parse`).
+## Dynamic Provider Override
 
+Normally, ONR picks which upstream provider to route to by looking at the `model` parameter inside the JSON body and matching it against your `models.yaml` registry.
+
+However, a client can explicitly force a request to hit a specific upstream provider using the custom override header:
+
+```http
+x-onr-provider: anthropic
+```
+*If present, this header bypasses `models.yaml` entirely and executes the DSL defined in `config/providers/anthropic.conf`.*
+
+## Streaming Guarantee
+
+Streaming LLM responses is notoriously tricky due to varying Server-Sent Event (SSE) framings, chunk layouts, and closing signals across different LLM providers.
+
+ONR guarantees that if a client sends a standard OpenAI `stream: true` flag in the JSON body:
+1. It will establish a persistent `text/event-stream` with the client.
+2. It will apply the respective `sse_parse` transformations defined in the provider's DSL.
+3. It will emit cleanly formatted, OpenAI-schema-compliant delta chunks back to the client.

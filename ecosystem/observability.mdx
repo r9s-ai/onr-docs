@@ -1,0 +1,44 @@
+---
+title: "Observability Stack"
+description: "Ready-to-use Grafana dashboards for metrics and tracing."
+---
+
+Open Next Router emits structured access logs that can be seamlessly consumed by Promtail, Loki, and Grafana for comprehensive gateway monitoring. The ONR repository includes a pre-configured Docker Compose setup to spin up this entire stack locally in seconds.
+
+## Starting the Stack
+
+Ensure you have Docker installed, then run the following commands:
+
+```bash
+cd deploy/observability
+docker compose up -d
+```
+
+## Accessing the Dashboards
+
+Once the containers are running, you can access the pre-configured environments:
+
+- **Grafana**: http://localhost:3001 (Credentials: `admin` / `admin`)
+- **Loki API**: http://localhost:3100
+
+### Auto Provisioning
+
+The observability stack comes completely batteries-included:
+- The `Loki` data source (uid: `loki`) is automatically created at startup.
+- The **ONR Access Log Overview** Dashboard is automatically imported into the `ONR` folder across your Grafana instance.
+- No manual JSON imports or data-source configurations are required.
+
+## Stopping the Stack
+
+To spin down the logs and monitoring:
+
+```bash
+cd deploy/observability
+docker compose down
+```
+
+<Warning>
+  **Important Notes on Logging:**
+  - This setup is configured to read from `logs/access.log`.
+  - When configuring Grafana/Loki, always keep label cardinality low. Avoid logging highly unique strings (like individual Request IDs) directly as labels. 
+</Warning>

@@ -16,6 +16,80 @@ Open Next Router (ONR) routes requests, applies opt-in compatibility transforms,
   Runtime behavior must be described explicitly by DSL directives in `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)). The runtime proxy stays an execution engine, not a guessing layer.
 </Callout>
 
+## Architecture at a Glance
+
+```mermaid
+flowchart TD
+    %% Base styling
+    classDef default fill:#1a1b26,stroke:#414868,stroke-width:1px,color:#c0caf5;
+    classDef layer fill:#1f2335,stroke:#292e42,stroke-width:1px,color:#a9b1d6,rx:10,ry:10;
+    classDef file fill:#24283b,stroke:#565f89,stroke-width:1px,color:#7aa2f7,rx:4,ry:4;
+    
+    subgraph ClientLayer ["Client Layer"]
+        direction TB
+        Clients["API Clients<br/>(OpenAI-compatible request)"]
+    end
+
+    subgraph RuntimeApp ["HTTP Server Pipeline"]
+        direction TB
+        Server["Gin HTTP Server Setup"]
+        
+        subgraph Middlewares ["Middleware Chain"]
+            direction TB
+            ReqID["Request ID Injection"]
+            Auth["Bearer & TokenAuth"]
+            Dump["Traffic Dump Auditing"]
+            ReqID --> Auth --> Dump
+        end
+        
+        subgraph Proxy ["Proxy Runtime"]
+            direction TB
+            Router["Model Request Router"]
+            Exec["DSL Executor Engine"]
+            Router --> Exec
+        end
+        
+        Server --> ReqID
+        Dump --> Router
+    end
+
+    subgraph Configs ["Configuration Files"]
+        direction LR
+        DSLConf("providers/*.conf<br/>(Routing Rules)")
+        OnrYaml("onr.yaml<br/>(Gateway Config)")
+        KeysYaml("keys.yaml<br/>(Access Control)")
+        ModelsYaml("models.yaml<br/>(Model DNS)")
+    end
+
+    subgraph CoreLib ["DSL Processing Core"]
+        direction TB
+        Registry["In-Memory Registry"]
+        Transform["JSON Transformers"]
+        SSEParse["SSE Stream Parsers"]
+        
+        Registry --> Transform
+        Registry --> SSEParse
+    end
+
+    subgraph Upstream ["Upstream Provider APIs"]
+        Providers["OpenAI, Anthropic, Gemini, etc."]
+    end
+
+    %% Main flow
+    Clients --> Server
+    Exec <--> Providers
+    Exec --> Registry
+    
+    %% Config Loading
+    Server -. "Bind" .-> OnrYaml
+    Auth -. "Check" .-> KeysYaml
+    Router -. "Match" .-> ModelsYaml
+    Registry -. "Parse" .-> DSLConf
+
+    class ClientLayer,RuntimeApp,CoreLib,Configs,Upstream,Middlewares,Proxy layer;
+    class DSLConf,OnrYaml,KeysYaml,ModelsYaml file;
+```
+
 ## Jump in
 
 <Cards>

@@ -1,34 +1,46 @@
 ---
 title: "onr.yaml"
-description: "Runtime server config (ports, providers dir, proxies, pricing, traffic dump)."
+description: "Core runtime server configuration."
 ---
 
-`onr.yaml` is the main runtime config.
+The `onr.yaml` file is the master configuration for your ONR gateway. It dictates server ports, file watch reload behaviors, traffic dump controls, and observability settings.
 
-## Common knobs
+## Server Settings
 
-- Provider DSL directory: `providers.dir` or `ONR_PROVIDERS_DIR`
-- Provider DSL auto-reload (file watch, opt-in): `providers.auto_reload.enabled`
-- Token key BYOK-without-k switch: `auth.token_key.allow_byok_without_k`
-- Outbound HTTP proxy per provider: `upstream_proxies.by_provider`
-- OAuth token persistence:
+Controls the core HTTP server bounds and process signals.
 
 ```yaml
-oauth:
-  token_persist:
-    enabled: true
-    dir: "./run/oauth"
+server:
+  listen: ":3300"
+  read_timeout_ms: 60000
+  write_timeout_ms: 60000
+  pid_file: "/var/run/onr.pid"
 ```
+
+## Global Authentication
+
+You can secure the gateway itself by requiring an API key for incoming requests.
 
 ```yaml
 auth:
-  token_key:
-    allow_byok_without_k: false
+  api_key: "change-me"
+```
+*(If `api_key` is set, all clients must send `Authorization: Bearer change-me` or use a defined key in `keys.yaml`)*
+
+## Upstream Forwarding Proxies
+
+If ONR needs to egress traffic through a corporate proxy (like a NAT gateway or a local VPN client like Clash), you can set this universally per provider.
+
+```yaml
+upstream_proxies:
+  by_provider:
+    openai: "http://127.0.0.1:7890"
+    gemini: "socks5://172.18.156.198:1081"
 ```
 
-## Provider Auto Reload
+## Hot Reloads
 
-Disabled by default. When enabled, ONR watches `providers.dir` and automatically reloads provider DSL files.
+You can configure ONR to natively watch the `.conf` DSL files and reload itself safely without dropping inflight requests.
 
 ```yaml
 providers:
@@ -37,29 +49,38 @@ providers:
     enabled: true
     debounce_ms: 300
 ```
+*Note: Enabled by default in dev, but usually disabled in Kubernetes in favor of Pod rollouts.*
 
-Environment overrides:
+## Traffic Dumps (Audit)
 
-- `ONR_PROVIDERS_AUTO_RELOAD_ENABLED`
-- `ONR_PROVIDERS_AUTO_RELOAD_DEBOUNCE_MS`
-
-## Pricing switch
-
-Runtime cost calculation is controlled globally:
+If you need to capture raw, unadulterated request/response payloads (for debugging or exact payload auditing), activate `traffic_dump`.
 
 ```yaml
-pricing:
+traffic_dump:
   enabled: true
+  dir: "./dumps"
+  file_path: "{{.request_id}}.log"
+  # Set mask_secrets to true to auto-redact bearer tokens
+  mask_secrets: true 
 ```
 
-## Access Log Rotation
+## Access Logs & Rotation
 
-Built-in access log rotation is optional and disabled by default.
+Access logs provide the core metrics generation for your cluster.
+System logs are written to `stderr` with fixed prefix format:
+`[ONR] <time> | <LEVEL> | <category> | <message> | key=value ...`
 
 ```yaml
 logging:
+  level: "info" # debug | info | warn | error
   access_log: true
   access_log_path: "./logs/access.log"
+  
+  # Automatically infer client app names (like Cursor) from the User-Agent
+  appname_infer:
+    enabled: true
+    
+  # Enable built-in file rotation if you don't use logrotate
   access_log_rotate:
     enabled: true
     max_size_mb: 100
@@ -67,48 +88,3 @@ logging:
     max_age_days: 14
     compress: false
 ```
-
-Rules:
-
-- `logging.access_log_rotate.enabled=true` requires:
-  - `logging.access_log=true`
-  - non-empty `logging.access_log_path`
-- Rotation triggers when either:
-  - local day changes, or
-  - file size would exceed `max_size_mb`.
-
-Knob semantics:
-
-- `max_size_mb`: rotate when the next write would exceed this size.
-- `max_backups`: keep only the newest N archives.
-- `max_age_days`: remove archives older than N days; `0` means no age-based cleanup.
-- `compress`: gzip archives after rotation.
-
-Archive naming:
-
-- `<access_log_path>.YYYYMMDD-HHMMSS.NNNNNNNNN`
-- With compression: same file name plus `.gz`
-
-Daily-first example:
-
-```yaml
-logging:
-  access_log: true
-  access_log_path: "./logs/access.log"
-  access_log_rotate:
-    enabled: true
-    max_size_mb: 102400
-    max_backups: 14
-    max_age_days: 14
-    compress: false
-```
-
-This keeps size-triggered rotation unlikely for normal traffic while retaining day-boundary rotation.
-
-Environment overrides:
-
-- `ONR_ACCESS_LOG_ROTATE_ENABLED`
-- `ONR_ACCESS_LOG_ROTATE_MAX_SIZE_MB`
-- `ONR_ACCESS_LOG_ROTATE_MAX_BACKUPS`
-- `ONR_ACCESS_LOG_ROTATE_MAX_AGE_DAYS`
-- `ONR_ACCESS_LOG_ROTATE_COMPRESS`

@@ -1,0 +1,120 @@
+---
+title: "Load Balancing & Fallbacks"
+description: "How to configure resilient clusters of LLM providers."
+---
+
+When running LLM applications in production, you cannot rely on a single upstream provider. Rate limits, regional outages, and quota expirations highlight the need for robust HA (High Availability) strategies.
+
+Open Next Router includes a powerful `balance` directive that lets you handle these failovers dynamically, right from your DSL configs.
+
+## The `balance` Block
+
+The `balance` block allows you to instruct ONR on how to route incoming requests when multiple credentials or upstream targets are available for a given path.
+
+### Priority Failover (Active-Passive)
+
+The most common technique is **Priority Failover**. You set up a primary credential and multiple backups. The system routes exclusively to the primary, but instantly falls back to the backups if the primary responds with an HTTP error code (like `429 Too Many Requests` or `500 Internal Server Error`).
+
+```nginx
+# config/providers/openai.conf
+provider openai {
+  mapper = "openai"
+}
+
+model "gpt-4" {
+  provider = "openai"
+  
+  balance {
+    strategy = "priority"
+    
+    # Using credential arrays. They are attempted in order.
+    # If the first fails, it falls back to the second.
+    credentials = [
+      "sk-proj-primary...",
+      "sk-proj-backup-1...",
+      "sk-proj-backup-for-backups..."
+    ]
+  }
+}
+```
+
+### Round Robin (Active-Active)
+
+If you merely want to distribute traffic evenly across multiple keys or instances to maximize your concurrency layout, use the `round_robin` strategy. 
+
+```nginx
+model "gpt-4o" {
+  provider = "openai"
+  
+  balance {
+    strategy = "round_robin"
+    
+    credentials = [
+      "sk-key-A...",
+      "sk-key-B..."
+    ]
+  }
+}
+```
+
+## Cross-Provider Fallbacks
+
+A true Multi-LLM gateway shines when it can fall back *across entirely different providers*. 
+
+Suppose your API client requests `gpt-4o`. If OpenAI APIs are completely down, you can configure ONR to rewrite the request seamlessly to Anthropic's `claude-3-5-sonnet`. By the time the response hits the client, ONR will have transformed Anthropic's response back into the OpenAI `gpt-4o` structure.
+
+```nginx
+# Map a virtual model to a primary provider
+model "virtual-gpt-4o" {
+  provider = "openai"
+  
+  # When the client requests "gpt-4o", ONR proxies to real "gpt-4o"
+  req_map {
+    model = "gpt-4o"
+  }
+  
+  balance {
+    strategy = "priority"
+    
+    # 1. First, try OpenAI
+    target {
+      provider = "openai"
+      credential = "sk-openai..."
+    }
+    
+    # 2. If OpenAI completely fails, failover to Anthropic
+    target {
+      provider = "anthropic"
+      credential = "sk-ant..."
+      
+      # We override the model inside the target block specifically for Anthropic
+      req_map {
+        model = "claude-3-5-sonnet-20241022"
+      }
+    }
+  }
+}
+```
+
+## Retry and Error Configurations
+
+You can further control exactly *how many times* ONR should retry, and *which HTTP status codes* count as failures invoking the fallback.
+
+```nginx
+balance {
+    strategy = "priority"
+    retry    = 3
+    
+    # Status codes that trigger the failover (default usually includes 429 and 50x)
+    retry_status_codes = [429, 500, 502, 503, 504]
+    
+    credentials = [
+      "sk-primary...",
+      "sk-backup..."
+    ]
+}
+```
+
+<Tip>
+When tracing fallback journeys in the TUI (`onr-admin tui`) or access logs, you will notice ONR records exactly which targets were attempted and failed before finally returning a successful stream to the client.
+</Tip>

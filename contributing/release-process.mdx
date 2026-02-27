@@ -1,0 +1,70 @@
+---
+title: "Release Process"
+description: "How new Open Next Router versions are tagged and published."
+---
+
+This repository contains two release tracks:
+
+1. **Runtime/CLI release**: Core Binaries (`onr`, `onr-admin`), and Docker images.
+2. **Module release**: `onr-core` Go module for stable external consumption.
+
+---
+
+## 1. Runtime / CLI Releases
+
+To publish a new gateway application binary and push images to the container registry, use a root tag in the format `vX.Y.Z`:
+
+```bash
+git tag -a v1.2.3 -m "Release v1.2.3"
+git push origin v1.2.3
+```
+
+This triggers the `.github/workflows/release.yml` GitHub Action, which runs tests and GoReleaser.
+
+### Artifacts Generated
+
+- GitHub release assets for `onr` and `onr-admin`
+- Config bundle: `open-next-router_config_vX.Y.Z.tar.gz` (includes `config/providers/*.conf` and `config/*.example.yaml`)
+- GHCR image: `ghcr.io/r9s-ai/open-next-router:<version>` and `latest`
+- Multi-arch Docker images (amd64, arm64).
+
+---
+
+## 2. onr-core Module Release
+
+`onr-core` is a separate Go module designed for developers building custom plugins or embedding ONR logic.
+
+- **Module path:** `github.com/r9s-ai/open-next-router/onr-core`
+- **Module file:** `onr-core/go.mod`
+
+To publish a stable module version, use a submodule tag in the format `onr-core/vX.Y.Z`:
+
+```bash
+git tag -a onr-core/v1.2.3 -m "onr-core v1.2.3"
+git push origin onr-core/v1.2.3
+```
+
+This triggers `.github/workflows/release-onr-core.yml`, which:
+- Verifies the tagged commit is on `main`
+- Runs `go test -v ./...` in the `onr-core/` directory
+- Creates a GitHub release for the tag
+
+### Consuming the Module
+
+Consumers can install it with:
+
+```bash
+go get github.com/r9s-ai/open-next-router/onr-core@v1.2.3
+```
+
+### Verify Published Versions
+
+To list available versions:
+
+```bash
+go list -m -versions github.com/r9s-ai/open-next-router/onr-core
+```
+
+<Warning>
+  **Important Note:** Root tags (`v*`) and `onr-core` tags (`onr-core/v*`) are intentionally separate. Do not use root tags to version the `onr-core` module.
+</Warning>

@@ -1,0 +1,140 @@
+---
+title: "ONR Admin & CLI Tools"
+description: "The official web dashboard and command-line companion for Open Next Router."
+---
+
+`onr-admin` is a powerful companion binary shipped alongside Open Next Router. It provides an API for web-based GUI management, a Terminal UI (TUI) for debugging, and a suite of CLI tools for cryptography, validation, and token generation.
+
+## Basic Usage
+
+You must build the `onr-admin` binary first if you are compiling from source:
+
+```bash
+make build
+onr-admin <subcommand> [flags]
+```
+
+To see available commands:
+
+```bash
+onr-admin --help
+```
+
+---
+
+## 1. Web Dashboard (Admin Panel)
+
+Start the local web editor for managing provider DSL configurations visually.
+
+```bash
+onr-admin web --config ./onr.yaml --listen 127.0.0.1:3310
+```
+
+Then open `http://127.0.0.1:3310` in your browser. 
+
+<Tip>
+  **Features of the Web Editor:**
+  - Validates your DSL syntax before saving.
+  - Automatically loads and formats traffic dumps if `traffic_dump.enabled=true` in your `onr.yaml`.
+  - Supports quick test curls right from the browser.
+</Tip>
+
+---
+
+## 2. Terminal UI (TUI) log viewer
+
+Open the interactive TUI to debug incoming traffic and outgoing requests.
+
+```bash
+onr-admin tui --config ./onr.yaml
+```
+
+The TUI reads traffic dump logs from the `traffic_dump.dir` defined in your config (defaults to `./dumps`).
+
+**Key Bindings:**
+- `↑ / ↓`: Navigate traffic requests
+- `Enter`: View detailed request/response dump
+- `/`: Filter logs by provider, model, path, status, or request ID
+- `r`: Reload
+- `q`: Quit
+
+---
+
+## 3. Cryptography Tools
+
+Manage encrypted downstream or upstream keys securely.
+
+```bash
+# Generate a random ONR_MASTER_KEY (base64)
+onr-admin crypto gen-master-key --export
+
+# Encrypt a plaintext secret
+onr-admin crypto encrypt --text 'sk-xxxx'
+
+# Decrypt a secret
+onr-admin crypto decrypt --text 'ENC[v1:aesgcm:...]'
+
+# Encrypt plaintext values in keys.yaml in-place
+onr-admin crypto encrypt-keys --config ./onr.yaml
+```
+
+---
+
+## 4. Token Generation
+
+Generate a specialized token key format (`onr:v1?...`) that clients can use in the `Authorization: Bearer ...` header.
+
+```bash
+onr-admin token create \
+  --config ./onr.yaml \
+  --access-key-name client-a \
+  -p openai \
+  -m gpt-4o-mini
+```
+
+---
+
+## 5. Configuration Validation
+
+Validate all YAML and provider DSL configurations to ensure there are no syntax errors.
+
+```bash
+onr-admin validate all --config ./onr.yaml
+```
+
+---
+
+## 6. Upstream Balance Checking
+
+Query upstream balances using your configured credentials.
+
+```bash
+# Check single provider
+onr-admin balance get --config ./onr.yaml -p openai
+
+# Check multiple providers
+onr-admin balance get --config ./onr.yaml --providers openai,openrouter
+
+# Check all providers
+onr-admin balance get --config ./onr.yaml --all
+```
+
+---
+
+## 7. Automated Updates
+
+Update your ONR binaries or provider configurations directly from GitHub Release assets.
+
+```bash
+# Update just the onr gateway binary
+onr-admin update onr
+
+# Update just the admin binary
+onr-admin update onr-admin
+
+# Update the provider config templates from the latest release bundle
+onr-admin update providers --config ./onr.yaml
+
+# Update everything
+onr-admin update all
+```

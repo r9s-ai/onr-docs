@@ -1,9 +1,11 @@
 ---
 title: "Top-Level Structure"
-description: "syntax, provider, defaults, and match blocks."
+description: "How a provider file is laid out."
 ---
 
-```conf
+Every provider configuration file requires a baseline structure to function.
+
+```nginx
 syntax "next-router/0.1";
 
 provider "openai" {
@@ -15,8 +17,16 @@ provider "openai" {
 }
 ```
 
-Notes:
+### syntax
+`syntax "next-router/0.1";` is a version marker. The parser currently does not strictly validate it, but it is recommended to keep it for future compatibility.
 
-- `syntax "next-router/0.1";` is a version marker (recommended to keep).
-- `defaults` is applied before the selected `match`.
+### provider
+The `provider "<name>" { ... }` block encompasses all routing logic for that provider.
 
+### defaults and match priority
+A provider block typically contains a `defaults` block and several `match` blocks.
+
+**Merge Rule (Important)**:
+- Configurations defined in `defaults` are applied **first**.
+- Configurations from the selected `match` block are applied **afterwards**.
+- This means specific `match` settings will **merge** or **override** the generic settings set inside `defaults`.

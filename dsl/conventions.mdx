@@ -1,17 +1,32 @@
 ---
 title: "Conventions"
-description: "Formatting, comments, and file naming rules."
+description: "Punctuation, naming rules, and basic syntax."
 ---
 
-## File conventions
+When writing Open Next Router DSL configurations, follow these strict conventions to ensure the parser can read your files successfully:
 
-- One provider per file: `config/providers/<provider>.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers))
-- File name must match provider name (case-insensitive match; normalized to lowercase)
+- **One provider per file**: `config/providers/<provider>.conf`
+- **File name must match provider name**: e.g., `config/providers/openai.conf` must contain `provider "openai" { ... }`
+- **Case-insensitive matching**: Provider matching is completely case-insensitive; everything is normalized to lowercase internally. We strongly recommend using lowercase everywhere in configs.
+- **Semicolons are required**: Every statement MUST end with a semicolon `;`.
+- **Only blocks use braces**: Blocks like `request`, `upstream`, or `match` use `{}`. Directives themselves do not (nginx-like style).
+- **One directive per line**: This is the recommended style for better readability and cleaner git diffs.
+- **Comments**: Supported formats are `#`, `//`, or `/* ... */`.
 
-## Syntax conventions
+### Example of Good Formatting
 
-- Semicolon `;` is required for every statement
-- Only blocks use `{}`; directives do not
-- Recommended: one directive per line (better diffs)
+```nginx
+upstream_config {
+  base_url = "https://api.example.com";
+}
 
-Comments are supported: `#`, `//`, `/* ... */`.
+match api = "chat.completions" {
+  upstream {
+    set_path "/v1/chat/completions";
+    set_query stream "true";
+  }
+  response {
+    resp_passthrough;
+  }
+}
+```

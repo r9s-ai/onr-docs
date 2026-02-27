@@ -1,31 +1,96 @@
 ---
 title: "Quickstart"
-description: "Run Open Next Router locally in minutes."
+description: "From zero to a fully functional Open Next Router gateway in under 2 minutes."
 ---
 
-## Prerequisites
+Welcome to Open Next Router! This guide will help you install, configure, and route your first LLM request through the gateway locally.
 
-- Go 1.24+
-- Make
+<Note>
+  **Prerequisites:** Ensure you have **Go 1.25+** and **Make** installed on your system. If you prefer Docker, check out the [Docker Guide](/getting-started/docker).
+</Note>
 
-## Build
+## Getting Up and Running
 
-```bash
-make build
-```
+<Steps>
+  <Step title="Clone the Repository">
+    First, grab the source code from GitHub:
+    ```bash
+    git clone https://github.com/r9s-ai/open-next-router.git
+    cd open-next-router
+    ```
+  </Step>
 
-## Run with default config
+  <Step title="Build the Binary">
+    Compile the `onr` binary using the provided Makefile:
+    ```bash
+    make build
+    ```
+    This will place the executable in the `bin/` directory or your `$GOPATH/bin`. If it's globally available, you can simply run `onr`.
+  </Step>
 
-```bash
-onr run -c onr.yaml
-```
+  <Step title="Initialize Configuration Files">
+    Open Next Router relies on three main YAML configuration files. You can start with the defaults provided in the repository.
 
-## Validate provider configs
+    <AccordionGroup>
+      <Accordion title="onr.yaml (Server Config)" icon="server">
+        Main server configurations including ports, logger, and paths to other config files.
+      </Accordion>
+      <Accordion title="keys.yaml (Authentication & Routing)" icon="key">
+        Defines your downstream API keys, rate limits, and which DSL routing profile to apply.
+      </Accordion>
+      <Accordion title="models.yaml (Provider Secrets)" icon="lock">
+        Safely store the actual upstream API keys (e.g., OpenAI, Anthropic tokens) required to dispatch requests.
+      </Accordion>
+    </AccordionGroup>
+  </Step>
 
-```bash
-onr test -c onr.yaml
-```
+  <Step title="Run Configuration Tests">
+    It's always a good idea to validate your configuration syntax before starting the server:
+    ```bash
+    onr test -c onr.yaml
+    ```
+    If everything is correct, you'll see a `Configuration is valid` message.
+  </Step>
 
-## Next
+  <Step title="Start the Gateway">
+    Launch the router:
+    ```bash
+    onr run -c onr.yaml
+    ```
+    You should see the server boot up and begin listening on `http://localhost:3300`.
+  </Step>
 
-- Continue with [Install](/getting-started/install), [Run From Source](/getting-started/run-from-source), and [DSL Overview](/dsl/overview).
+  <Step title="Send Your First Request">
+    Open Next Router natively exposes an OpenAI-compatible `/v1/chat/completions` endpoint. Try calling it:
+    
+    ```bash
+    curl -X POST http://localhost:3300/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer your-onr-client-token" \
+      -d '{
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello, Open Next Router!"}]
+      }'
+    ```
+    *Replace `your-onr-client-token` with a token defined in your `keys.yaml`.*
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you have traffic flowing, explore these essential topics to unlock the power of ONR:
+
+<CardGroup cols={2}>
+  <Card title="DSL Overview" icon="code" href="/dsl/overview">
+    Learn how to write dynamic routing rules, rewrites, and token tracking.
+  </Card>
+  <Card title="Load Balancing & Fallbacks" icon="scale-balanced" href="/guides/load-balancing">
+    Configure multi-provider failover for maximum resilience.
+  </Card>
+  <Card title="Observability" icon="chart-line" href="/ecosystem/observability">
+    Set up Promtail, Loki, and Grafana for comprehensive gateway monitoring.
+  </Card>
+  <Card title="Admin Panel" icon="desktop" href="/ecosystem/admin-panel">
+    Manage keys and live DSL configurations visually.
+  </Card>
+</CardGroup>

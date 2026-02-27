@@ -1,42 +1,68 @@
 ---
-title: "request"
-description: "Header ops, model mapping, JSON ops, and req_map."
+title: "Request Block"
+description: "Mutating logic for inflight headers and JSON bodies."
 ---
 
-## Header operations
+The `request` block enables you to perform lightweight transformations on the payload *before* it gets sent to the upstream provider.
 
-```conf
+## Header Operations
+
+You can arbitrarily set or delete HTTP headers going to the upstream server.
+
+```nginx
 request {
   set_header "x-trace-id" "trace-123";
+  set_header "x-foo" concat("a-", $request.model_mapped);
+  
   del_header "x-remove-me";
 }
 ```
+*Note: If the same header is set multiple times, the last one wins. Deletions apply in order.*
 
-## Model mapping
+## Model Mapping
 
-```conf
+Use `model_map` to alias or hardcode model names conditionally.
+
+```nginx
 request {
   model_map "gpt-4o-mini" "gpt4o-mini-prod";
+  model_map "gpt-4o-mini" $request.model;
+  
   model_map_default $request.model;
 }
 ```
+- Maps `$request.model` to `$request.model_mapped`.
+- Exact match on the `from` string.
+- If no matches occur, `model_map_default` dictates what `$request.model_mapped` becomes.
 
-## JSON operations
+## JSON Mutations
 
-```conf
+Apply lightweight mutations directly to the upstream JSON body.
+
+```nginx
 request {
   json_set "$.stream" true;
   json_set_if_absent "$.instructions" "";
+  
   json_rename "$.max_tokens" "$.max_completion_tokens";
   json_del "$.tools";
 }
 ```
+- Supports a subset of object-path JSONPath expressions (e.g. `$.a.b.c`).
+- `json_set` values support primitives (`true`, `false`, `null`, integers, strings) or expressions (like `concat(...)`).
 
-## req_map (compat request mapping)
+## Structural Request Mapping
 
-```conf
-request { req_map openai_chat_to_anthropic_messages; }
+Use `req_map` to apply heavy, cross-provider schema transformations (such as converting an OpenAI JSON request into a Gemini or Anthropic JSON request).
+
+```nginx
+request { req_map <mode>; }
 ```
 
-If multiple `req_map` directives are present, the last one wins.
+### Built-in Modes (v0.1)
 
+- `openai_chat_to_openai_responses`
+- `anthropic_to_openai_chat`
+- `gemini_to_openai_chat`
+- `openai_chat_to_gemini_generate_content`
+- `openai_chat_to_anthropic_messages`

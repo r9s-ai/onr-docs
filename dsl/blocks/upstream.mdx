@@ -1,22 +1,46 @@
 ---
-title: "upstream"
-description: "Set upstream path/query."
+title: "Upstream Block"
+description: "Configuring the egress path and query parameters."
 ---
 
-## set_path
+The `upstream` block handles rewriting the outgoing HTTP Path and Query Parameters before ONR dispatches the request to the upstream target.
 
-```conf
-upstream { set_path "/v1/chat/completions"; }
-```
+## Path Mutation
 
-## set_query / del_query
+You can completely replace the original request path using `set_path`.
 
-```conf
+```nginx
 upstream {
-  del_query "foo";
-  set_query stream "true";
+  set_path "/v1/chat/completions";
 }
 ```
 
-Execution order: all `del_query` first, then `set_query`.
+This ensures that regardless of whether a user calls `/v1/chat/completions` or `/v1/messages`, the upstream provider always sees the path defined by `set_path`.
 
+## Query Parameter Operations
+
+You can inject, override, or delete specific URL query parameters before dispatch.
+
+### Setting/Modifying Queries
+
+```nginx
+upstream {
+  set_query "api-version" "2024-10-01";
+  set_query stream "true";
+  
+  # Using built-in variables (NO QUOTES for variables):
+  set_query key $channel.key;
+}
+```
+*Note: Using `$channel.key` without quotes evaluates the variable dynamically. Specifying `"$channel.key"` inside quotes treats it as a literal string.*
+
+### Deleting Queries
+
+```nginx
+upstream {
+  del_query "foo";
+  del_query bar;
+}
+```
+
+> **Execution Order**: When handling query parameters, ONR always executes all `del_query` directives *first*, followed by the `set_query` directives.

@@ -1,11 +1,20 @@
 ---
-title: "error"
-description: "Map upstream errors to stable client-facing formats."
+title: "Error Block"
+description: "Handling and normalizing provider failures."
 ---
 
-```conf
-error { error_map openai; }
+The `error` block allows you to specify how upstream error statuses and payloads are transformed before reaching the client. Many providers rely on completely different HTTP error codes and body schemas for rate limits and payload limits. 
+
+## Syntax
+
+```nginx
+error { 
+  error_map <mode>; 
+}
 ```
 
-Allowed modes are whitelist-enforced at load time (for example `openai`, `common`, `passthrough`).
+### Supported Mapping Modes (v0.1)
 
+- **`openai`**: Normalizes the incoming error structure into the standard OpenAI `{"error": {"message": "...", "type": "..."}}` format.
+- **`common`**: A broader normalization mode for widely-used REST API error shapes.
+- **`passthrough`**: Bypasses the ONR error normalization engine completely, passing the raw upstream HTTP error headers and body straight through to the client.

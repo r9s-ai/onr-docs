@@ -1,14 +1,20 @@
 ---
-title: "upstream_config"
-description: "Declare upstream base URL."
+title: "Upstream Config Block"
+description: "Setting the base destination."
 ---
 
-```conf
+The `upstream_config` block defines the root target coordinate of the LLM provider.
+
+## Syntax
+
+```nginx
 upstream_config {
   base_url = "https://api.example.com";
 }
 ```
 
-- `base_url` is required and must be a string literal.
-- Runtime channel/provider key can override base URL when configured.
+### Directives
 
+- `base_url`: (Required) Must be a fixed string literal defining the root domain.
+
+> **Dynamic Override**: If the channel/provider key passing through ONR at runtime defines a `base_url` override, it will take precedence over this default value. Otherwise, this default is used.

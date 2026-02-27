@@ -1,62 +1,71 @@
 ---
 title: "keys.yaml"
-description: "Upstream keys and client access keys."
+description: "Managing proxy upstream credential fleets and client access control."
 ---
 
-## Upstream keys
+The `keys.yaml` file is the central vault for Open Next Router. It manages both the pool of API keys you hold with upstream LLM providers, and the access tokens you issue to your clients.
 
-You can store plaintext keys (not recommended for public repos) or encrypted values.
+## Upstream Provider Keys
 
-Encrypted format (AES-256-GCM):
+These are the credentials you use to authenticate with external services like OpenAI or Anthropic. 
 
-`ENC[v1:aesgcm:<base64(nonce+ciphertext)>]`
+ONR groups credentials by provider, allowing it to load-balance across multiple keys automatically within a single provider namespace.
 
-To decrypt, set `ONR_MASTER_KEY` (32 bytes or base64-encoded 32 bytes).
+```yaml
+providers:
+  openai:
+    keys:
+      - name: "key-billing-a"
+        value: "sk-proj-prod..."
+        # (Optional) You can redirect a specific proxy key to an alternate base url
+        # base_url_override: "https://my-openai-azure-proxy.com"
+        
+  anthropic:
+    keys:
+      - name: "haiku-cluster"
+        value: "sk-ant-... "
+```
 
-Generate an encrypted value:
+To avoid committing sensitive keys to version control, **providing an empty value allows environment variables to fulfill them.**
 
+### Environment Override (Recommended)
+
+ONR automatically maps `keys.yaml` entries to environment variables.
+- Using a named key: `ONR_UPSTREAM_KEY_<PROVIDER>_<NAME>`
+- E.g., `ONR_UPSTREAM_KEY_ANTHROPIC_HAIKU_CLUSTER=sk-ant-1234 onr run -c onr.yaml`
+
+---
+
+## Encrypted Upstream Keys
+
+To store credentials directly in GitHub without exposing them, you can employ built-in AES-256-GCM encryption.
+
+You can encrypt an API key using the ONR Admin CLI:
 ```bash
 echo -n 'sk-xxxx' | onr-admin crypto encrypt
 ```
 
-### Env override (recommended)
+This will produce a ciphertext like `ENC[v1:aesgcm:<base64(nonce+ciphertext)>]`. Simply paste this string into `keys.yaml`.
+At runtime, start the server with your symmetrical unlock key:
+`ONR_MASTER_KEY=your-32-byte-secret onr run -c onr.yaml`
 
-For each upstream key entry:
+---
 
-- If `name` is set: `ONR_UPSTREAM_KEY_<PROVIDER>_<NAME>`
-- Otherwise: `ONR_UPSTREAM_KEY_<PROVIDER>_<INDEX>` (1-based)
+## Downstream Access Keys (Client ACL)
 
-## Access keys (clients)
-
-`keys.yaml` can also contain access keys for clients:
+To control access to your ONR proxy, you issue Access Keys to your downstream clients.
 
 ```yaml
 access_keys:
   - name: "client-a"
-    value: "ak-xxx"
-    comment: "iOS app"
+    value: "ak-onr-client-001"
+    comment: "Internal Analytics Dashboard"
 ```
 
-Env override:
+A client provides this access token when calling ONR:
+`Authorization: Bearer ak-onr-client-001`
 
-- If `name` is set: `ONR_ACCESS_KEY_<NAME>`
-- Otherwise: `ONR_ACCESS_KEY_<INDEX>` (1-based)
+### Environment Override (Recommended)
 
-## Token Key (single-key clients)
-
-If your client cannot add custom headers and can only provide a single API key value, use Token Key:
-
-- `Authorization: Bearer onr:v1?...`
-
-See [Token Key (onr:v1?)](/api/token-key) for the full format and parameters.
-
-## Auth header
-
-Recommended client auth:
-
-- `Authorization: Bearer <ACCESS_KEY_FROM_KEYS_YAML>`
-
-Compatible headers:
-
-- `x-api-key`
-- `x-goog-api-key`
+- Using a named key: `ONR_ACCESS_KEY_<NAME>`
+- E.g., `ONR_ACCESS_KEY_CLIENT_A=ak-onr-client-001`

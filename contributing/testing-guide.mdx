@@ -1,0 +1,96 @@
+---
+title: "Testing Guide"
+description: "How to run Unit, E2E Mock, and Integration tests for Open Next Router."
+---
+
+## E2E Mock Testing Architecture
+
+To ensure the reliability of the `internal/proxy` layer, ONR uses a robust E2E Mock testing system. This system validates the end-to-end transformation behavior, including `req_map`, routing, `resp_map`, and `sse_parse`, without actually hitting real upstream providers (saving costs and avoiding flaky tests).
+
+### Scope and Goals
+
+- **Test Entry Point**: `open-next-router/internal/proxy/e2e_mock_test.go`
+- **Key Validations**:
+  1. Are requests correctly rewritten and routed to the target upstream paths?
+  2. Are responses accurately transformed back into the OpenAI-compatible format?
+  3. Are SSE termination events (`data: [DONE]`) ordered correctly and unique?
+
+---
+
+## How It Works
+
+1. **Downstream Request Simulation**
+   - We use `gin.CreateTestContext` and `httptest.NewRecorder` to simulate a client requesting ONR.
+   - The test directly enters the proxy chain via `Client.ProxyJSON(...)` without spinning up a full `onr` process.
+
+2. **Upstream Service Mocking**
+   - `httptest.Server` simulates the upstream provider APIs.
+   - It returns JSON or SSE text based on the test scenario.
+   - The handler asserts the upstream path, query parameters, and critical request fields to ensure the DSL rewrite worked.
+
+3. **DSL Configuration Isolation**
+   - Tests construct minimal provider DSL strings inline (`providerConf*`).
+   - These are dynamically written to `t.TempDir()` and loaded using `dslconfig.Registry.ReloadFromDir()`.
+   - Each test only loads the provider needed for that scenario, preventing pollution from global configurations.
+
+---
+
+## Directory Structure & Conventions
+
+Test data is organized under `open-next-router/internal/proxy/testdata/`:
+
+- `fixtures/`: Contains downstream request bodies (Input samples).
+- `mock_upstream/`: Contains upstream response bodies (Original JSON/SSE).
+- **Naming Convention**: Files are organized by `provider/scenario_name` for easy scaling.
+
+### Currently Supported Scenarios
+
+1. **Anthropic `/v1/messages` (Non-streaming)**
+   - Translates OpenAI chat request -> Anthropic messages request.
+   - Translates Anthropic JSON -> OpenAI chat completion JSON.
+2. **Anthropic `/v1/messages` (Streaming tool_use)**
+   - Translates Anthropic SSE `tool_use` events -> OpenAI `tool_calls` chunks.
+   - Validates `finish_reason=tool_calls` and a single `[DONE]`.
+3. **Gemini (Streaming)**
+   - Translates OpenAI chat request -> Gemini `:streamGenerateContent?alt=sse`.
+   - Validates Gemini SSE -> OpenAI chat chunks (including the usage chunk).
+4. **Azure Responses (Streaming)**
+   - Translates OpenAI chat request -> `/openai/responses?api-version=2025-04-01-preview`.
+   - Validates `[DONE]` does not arrive earlier than subsequent tokens.
+
+---
+
+## Running the Tests
+
+To run the mock E2E tests, navigate to the `open-next-router` directory and execute:
+
+```bash
+go test ./internal/proxy -run E2EMock -v
+```
+
+Or run the full proxy layer test suite:
+
+```bash
+go test ./internal/proxy
+```
+
+## Golden Baselines
+
+E2E test cases perform both critical field assertions and full Golden output comparisons.
+Golden files are located at: `open-next-router/internal/proxy/testdata/golden/`
+
+To avoid false positives caused by timestamps or random IDs, the test standardizes dynamic fields (like `created`, `chatcmpl_*`) before comparing.
+
+**Updating Golden Files:**
+Only do this when you intentionally change the transformation behavior.
+
+```bash
+cd open-next-router
+UPDATE_GOLDEN=1 go test ./internal/proxy -run E2EMock -v
+```
+
+After updating, run a normal regression to ensure baselines are consistent:
+
+```bash
+go test ./internal/proxy -run E2EMock -v
+```

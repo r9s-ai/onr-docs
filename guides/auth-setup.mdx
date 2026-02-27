@@ -1,0 +1,73 @@
+---
+title: "Authentication Setup"
+description: "Securely route traffic and exchange tokens across various upstream providers."
+---
+
+When routing requests to upstream AI providers, each provider usually requires different authentication strategies—from plain `Bearer` tokens to specialized headers like `x-api-key`, or even dynamic OAuth2 flows.
+
+Open Next Router (ONR) abstracts this entirely. Your clients (the users of your gateway) only need to authenticate with ONR using one standard format (`Authorization: Bearer <your-client-key>`), and ONR deals with the translation to the upstream providers.
+
+## Standard Token Injection
+
+The most common approach for providers like OpenAI, Anthropic, or DeepSeek is a simple static API key.
+
+When you configure `keys.yaml`, you map a client token to an upstream profile. In your provider DSL `config/providers/*.conf`, you define how ONR injects the upstream key (accessible dynamically as `$channel.key`).
+
+### Bearer Token
+```nginx
+auth {
+  # Injects: Authorization: Bearer <channel.key>
+  auth_bearer;
+}
+```
+
+### Custom Headers
+For providers like Anthropic that ask for `x-api-key`:
+```nginx
+auth {
+  # Injects: x-api-key: <channel.key>
+  auth_header_key "x-api-key";
+}
+```
+
+## OAuth 2.0 Dynamic Tokens
+
+Some providers (like Google Gemini on Vertex AI, or private Enterprise Clouds) forbid long-lived static API keys. They require exchanging a Service Account Key or a Refresh Token for a short-lived Access Token *before* the API call can be made.
+
+ONR's DSL natively handles the OAuth exchange lifecycle invisibly on the fly.
+
+### Built-in OAuth Profiles
+For known providers, you can use the built-in preset modes:
+```nginx
+auth {
+  # Tells ONR to execute the Gemini/Google Cloud OAuth exchange first
+  oauth_mode gemini;
+  
+  # Inject the resulting temporary access token as a standard Bearer
+  auth_oauth_bearer;
+}
+```
+
+### Custom OAuth Configurations
+If you are integrating with a proprietary corporate SSO or an unsupported provider, you can define the entire OAuth workflow. ONR will automatically execute the exchange, cache the token, and handle refresh skews.
+
+```nginx
+auth {
+  oauth_mode custom;
+  auth_oauth_bearer;
+  
+  # OAuth Endpoint
+  oauth_token_url "https://login.example.com/oauth/token";
+  oauth_method POST;
+  oauth_content_type form;
+  
+  # Payload Construction
+  oauth_form "grant_type" "client_credentials";
+  oauth_form "client_id" "my-app-id";
+  oauth_form "client_secret" $channel.key;
+  
+  # Define where in the JSON ONR should extract the new token and expiry
+  oauth_token_path "$.access_token";
+  oauth_expires_in_path "$.expires_in";
+}
+```

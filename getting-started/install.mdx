@@ -1,35 +1,90 @@
 ---
-title: "Install"
-description: "Install ONR as a service, with Docker, or with Docker Compose."
+title: "Installation"
+description: "Deploy Open Next Router natively, with Docker, Docker Compose, or Kubernetes."
 ---
 
-## One-click install (Linux)
+ONR provides flexible deployment strategies. Choose the environment that fits your workflow.
 
-Install the latest runtime release as a systemd service:
+<Tabs>
+  <Tab title="System Service (Linux)">
+    The easiest way to get the latest ONR binary running purely as a native Linux `systemd` background service.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/r9s-ai/open-next-router/main/tools/install_onr_service.sh | sudo bash -s -- \
-  --mode service \
-  --api-key 'change-me'
-```
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/r9s-ai/open-next-router/main/tools/install_onr_service.sh | sudo bash -s -- \
+      --mode service \
+      --api-key 'change-me'
+    ```
 
-Health check:
+    **Check the service status and health:**
+    ```bash
+    systemctl status onr
+    curl -sS http://127.0.0.1:3300/v1/models -H "Authorization: Bearer change-me"
+    ```
+  </Tab>
 
-```bash
-curl -sS http://127.0.0.1:3300/v1/models -H "Authorization: Bearer change-me"
-```
+  <Tab title="Docker">
+    If you already have Docker installed and just want to run the pre-built Github Container Registry image:
 
-Other modes:
+    ```bash
+    docker pull ghcr.io/r9s-ai/open-next-router:latest
+    docker run -d -p 3300:3300 ghcr.io/r9s-ai/open-next-router:latest
+    ```
+    *(Note: To inject configurations, you will want to mount `-v ./config:/etc/onr`.)*
+    
+    You can also use the one-click installer script to handle mounts automatically:
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/r9s-ai/open-next-router/main/tools/install_onr_service.sh | sudo bash -s -- \
+      --mode docker \
+      --api-key 'change-me'
+    ```
+  </Tab>
+  
+  <Tab title="Docker Compose">
+    Ideal for local development or simple single-node deployments where you want configs stored alongside the runner.
+    
+    If you cloned the repository:
 
-- Docker: `--mode docker`
-- Docker Compose: `--mode docker-compose`
-
-## Docker Compose (from repo)
-
-```bash
-cp config/onr.example.yaml onr.yaml
-cp config/keys.example.yaml keys.yaml
-cp config/models.example.yaml models.yaml
-docker compose up --build
-```
-
+    ```bash
+    cp config/onr.example.yaml onr.yaml
+    cp config/keys.example.yaml keys.yaml
+    cp config/models.example.yaml models.yaml
+    
+    docker compose up -d --build
+    ```
+    
+    Alternatively, using the one-click installer:
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/r9s-ai/open-next-router/main/tools/install_onr_service.sh | sudo bash -s -- \
+      --mode docker-compose \
+      --api-key 'change-me'
+    ```
+  </Tab>
+  
+  <Tab title="Kubernetes">
+    For high-availability, enterprise clusters, ONR compiles to an extremely lightweight alpine Go binary (~20MB memory footprint), making it a perfect stateless workload for K8s.
+    
+    You can mount the configurations (`onr.yaml`, `keys.yaml`, and the `providers/` DSL folder) directly directly via a K8s ConfigMap.
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: onr
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: onr
+      template:
+        metadata:
+          labels:
+            app: onr
+        spec:
+          containers:
+          - name: open-next-router
+            image: ghcr.io/r9s-ai/open-next-router:latest
+            ports:
+            - containerPort: 3300
+    ```
+  </Tab>
+</Tabs>

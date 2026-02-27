@@ -1,0 +1,54 @@
+---
+title: "ONR Language Server (LSP)"
+description: "Rich DSL IDE support for VSCode & Neovim."
+---
+
+The `onr-lsp` provides advanced IDE capabilities specifically for editing Open Next Router provider DSL files (`*.conf`). It is distributed both as a standalone Language Server binary and a packaged VS Code extension.
+
+## Feature Highlights
+
+- **Syntax Highlighting**: Immediate TextMate lexical parsing paired with semantic token coloring from the language server.
+- **Intelligent Autocomplete**: Provides directive completion dynamically depending on the current DSL block (e.g. `mapper` vs `model`), and enum value suggestions (like `balance_unit`, `method`).
+- **Hover Documentation**: Short documentation tooltips injected directly from the ONR DSL metadata definitions.
+- **Diagnostics**: Real-time syntax validation (missing braces, unknown directives) and semantic checks.
+- **Auto Formatting**: Leverages `textDocument/formatting` to keep your `.conf` files neat and standardized.
+
+## Installation
+
+### VS Code Extension
+
+You can find the official [Open Next Router DSL](https://marketplace.visualstudio.com/items?itemName=r9s-ai.onr-dsl) extension in the VS Code Marketplace.
+
+Once installed, the language server will automatically activate for all files matching `**/providers/*.conf`.
+
+### Default Settings
+
+The extension applies the following default editor settings for ONR DSL files:
+```json
+"[onr-dsl]": {
+    "editor.defaultFormatter": "r9s-ai.onr-dsl",
+    "editor.formatOnSave": true
+}
+```
+
+If you prefer to use a custom LSP path over the bundled binary, you can set `onrLsp.serverPath` in your workspace settings wrapper.
+
+---
+
+## Standalone CLI Formatter
+
+Aside from the LSP, the binary also functions as a powerful command-line formatter. 
+
+```bash
+# Build the LSP binary manually
+go build -o bin/onr-lsp ./cmd/onr-lsp
+
+# Read from stdin, write formatted result to stdout
+cat config/providers/openai.conf | ./bin/onr-lsp format
+
+# Format a specific file and output to stdout
+./bin/onr-lsp format config/providers/openai.conf
+
+# Format one file in-place
+./bin/onr-lsp format --write config/providers/openai.conf
+```

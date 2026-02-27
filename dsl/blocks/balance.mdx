@@ -1,8 +1,55 @@
 ---
-title: "balance"
-description: "Upstream balance query (optional)."
+title: "Balance Block"
+description: "Querying account balances from upstream APIs."
 ---
 
-The `balance` block declares how ONR queries upstream balance/usage endpoints.
+The `balance` block instructs ONR on how to query and parse the remaining credit balance available on a specific API Key for the upstream provider. 
 
-See `DSL_SYNTAX.md` for the full directive set and constraints.
+This is particularly useful when combined with the Admin Panel CLI or Web UI to monitor your credential fleet automatically.
+
+## Syntax
+
+```nginx
+balance {
+  balance_mode <mode>;
+}
+```
+
+### Built-in Modes
+
+- `openai`: Leverages standard OpenAI Dashboard endpoints to report remaining USD.
+- `custom`: Explicitly fetch and parse an arbitrary JSON endpoint.
+
+## Custom Balance Parsing
+
+If a provider does not support OpenAI-like `/dashboard/billing/credit_grants` endpoints, you can write complete request and parse directives.
+
+```nginx
+balance {
+  balance_mode custom;
+  
+  method GET;
+  path "/v1/user/balance"; # relative to base_url, or absolute
+  
+  # Inject Required Auth Headers
+  set_header "Authorization" concat("Bearer ", $channel.key);
+  
+  # Parse out the JSON float amount for remaining/used credits
+  balance_path "$.data.available_balance";
+  used_path "$.data.consumed_amount";
+  
+  # (Optional) USD or CNY
+  balance_unit "USD";
+}
+```
+
+### Value Arithmetic
+
+If your endpoint returns an expression or you need to do basic +/- operations instead of strictly extracting the path, you can use the expression fields.
+
+```nginx
+balance {
+  balance_expr = "$.data.total - $.data.used";
+}
+```
+*Note: The expression allows a restricted syntax using JSONPaths and basic +/- arithmetic.*

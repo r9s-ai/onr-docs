@@ -1,16 +1,47 @@
 ---
-title: "Expressions"
-description: "Built-in variables and expression gotchas."
+title: "Expressions & Variables"
+description: "Using built-in variables and simple expressions."
 ---
 
-Expressions are used by directives like `set_header`, `set_query`, and `model_map_default`.
+The ONR DSL is intentionally declarative, meaning there is no Turing-complete scripting language embedded. However, you can use built-in variables to dynamically construct paths, headers, and keys.
 
-## Important gotcha
+## Expression Contexts
 
-Built-in variables are expanded only when used as bare expressions:
+In positions where the DSL requires an `<expr>`, you can use:
 
-- ✅ `set_query stream $request.stream;`
-- ❌ `set_query stream "$request.stream";` (becomes a literal string)
+1. **String Literal**: `"abc"`
+2. **Variable**: `$channel.key`
+3. **Function**: `concat("Bearer ", $channel.key)`
 
-See the upstream `DSL_SYNTAX.md` for the complete list of built-in variables and functions.
+> *Note:* Variables are only evaluated when used as bare expressions. If you wrap them in double quotes (e.g., `"$channel.key"`), they are treated as plain string literals and will *not* be expanded.
 
+## Built-in Variables
+
+These variables are populated at runtime dynamically for every request.
+
+### `channel.*` context
+
+- `$channel.base_url`: The channel base URL (string). Overrides `upstream_config.base_url` if set by the API caller.
+- `$channel.key`: The downstream API key/token (string) meant to be passed to the upstream provider.
+
+### `request.*` context
+
+- `$request.model`: The original requested model name from the upstream JSON body.
+- `$request.model_mapped`: The transformed model name, determined after any `model_map` operations fire.
+
+## Expression Examples
+
+```nginx
+request {
+  # Set a custom header based on the target mapped model
+  set_header "x-upstream-model" $request.model_mapped;
+}
+
+upstream {
+  # Dynamically construct the path
+  set_path concat("/v1/", $request.model_mapped, "/chat/completions");
+  
+  # Inject query strings dynamically
+  set_query key $channel.key;
+}
+```

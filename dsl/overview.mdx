@@ -1,17 +1,34 @@
 ---
 title: "DSL Overview"
-description: "Nginx-like, atomic DSL for provider behavior."
+description: "Introduction to the Open Next Router syntax"
 ---
 
-All runtime behavior is declared explicitly by provider DSL files under `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)).
+Open Next Router (ONR) uses a custom, nginx-like Domain Specific Language (DSL) to define provider configurations. These `.conf` files specify how requests should be mapped, authorized, rewritten, and tracked for each upstream API provider.
 
-## Key rules
+## Where are configs stored?
 
-- One provider per file: `config/providers/<provider>.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers))
-- Every statement ends with `;`
-- Only blocks use `{}` (nginx-like)
-- `defaults` applies first; the selected `match` applies afterwards
+Provider configs live under `config/providers/*.conf` in the ONR environment and are loaded at startup.
+The directory can be customized via the `providers.dir` setting in `onr.yaml` or via the `ONR_PROVIDERS_DIR` environment variable.
 
-## Where to look for the full spec
+Whenever you modify these files, ONR can reload them dynamically without dropping traffic (via the Admin Panel or API).
 
-This docs site covers the structure and key semantics. For the complete directive reference, see the upstream repository document `DSL_SYNTAX.md`.
+## File Structure
+
+A standard provider file follows this layout:
+
+```nginx
+syntax "next-router/0.1";
+
+provider "openai" {
+  defaults {
+    # Default variables and configurations that apply to all requests for this provider
+  }
+
+  # Match blocks intercept specific API operations (e.g. Chat vs Embeddings)
+  match api = "chat.completions" stream = true {
+    # Specific streaming configurations
+  }
+}
+```
+
+Learn about [Conventions](/dsl/conventions) to start writing your own configs.

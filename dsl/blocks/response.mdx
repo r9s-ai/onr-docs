@@ -1,32 +1,78 @@
 ---
-title: "response"
-description: "passthrough, resp_map, sse_parse, and JSON ops."
+title: "Response Block"
+description: "Transforming the upstream payload back to the client."
 ---
 
-## Choose a response strategy
+The `response` block defines how the data returned by the LLM Provider should be mapped and sanitized before ONR streams it back to your user. If multiple mapping directives exist in a block, the **last one wins**.
 
-If multiple directives are present, the last one wins.
+## Passthrough (No Edits)
 
-- `resp_passthrough;` pass through upstream response
-- `resp_map <mode>;` non-streaming JSON mapping
-- `sse_parse <mode>;` streaming SSE mapping
+If the upstream natively responds with the OpenAI-compatible schema (like Groq, DeepSeek, or Anyscale), simply tell ONR to let the response pass through safely.
 
-## Response JSON ops
+```nginx
+response { 
+  resp_passthrough; 
+}
+```
 
-```conf
+## Structural Schema Mapping
+
+If the response is in a proprietary format (e.g., Anthropic or Gemini), you need to tell ONR how to map the JSON payload or Server-Sent Events (SSE) stream back into the OpenAI schema.
+
+### JSON Responses (Non-Streaming)
+
+```nginx
+response { 
+  resp_map <mode>; 
+}
+```
+*(Modes supported in v0.1)*:
+- `anthropic_to_openai_chat`
+- `openai_to_anthropic_messages`
+- `gemini_to_openai_chat`
+- `openai_responses_to_openai_chat`
+- `openai_to_gemini_chat`
+
+### Server-Sent Events (Streaming)
+
+```nginx
+response { 
+  sse_parse <mode>; 
+}
+```
+*(Modes supported in v0.1)*:
+- `anthropic_to_openai_chunks`
+- `openai_to_anthropic_chunks`
+- `gemini_to_openai_chat_chunks`
+- `openai_to_gemini_chunks`
+- `openai_responses_to_openai_chat_chunks`
+
+---
+
+## Best-Effort JSON Mutations
+
+In addition to schema mappers, ONR can run lightweight field additions, deletions, and renamings on the final response body before yielding to the user. 
+These work for both static JSON responses and individual `data:` chunk payloads during SSE streaming.
+
+```nginx
 response {
   json_del "$.usage";
   json_set "$.foo" "bar";
+  
+  json_set_if_absent "$.bar" "baz";
+  json_rename "$.a" "$.b";
 }
 ```
 
-On `text/event-stream`, JSON ops apply per SSE event's joined `data:` JSON object payload (best-effort).
+### Conditional SSE Mutations
 
-## SSE conditional delete
+You can conditionally delete JSON fields specifically during a running stream based on the event's internal type.
 
-```conf
+```nginx
 response {
+  # If the SSE event payload has `$.type == "message_delta"`, 
+  # delete the `$.usage` field from that specific event chunk.
   sse_json_del_if "$.type" "message_delta" "$.usage";
 }
 ```
-
+*Note: The conditional check requires an exact string match.*

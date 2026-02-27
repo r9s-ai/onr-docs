@@ -1,33 +1,59 @@
 ---
-title: "auth"
-description: "Declare auth header shape and optional OAuth exchange."
+title: "Auth Block"
+description: "Defining upstream authentication injection."
 ---
 
-## Bearer auth
+The `auth` block instructs ONR on how to securely pass the `$channel.key` (or dynamically generated OAuth tokens) to the upstream provider. 
 
-```conf
-auth { auth_bearer; }
+<Warning>
+**Never hardcode secrets inside your `.conf` files.** ONR securely pulls tokens at runtime from the active downstream session or `models.yaml`. The DSL only defines the *shape* of the injection.
+</Warning>
+
+## Standard Bearer Token
+
+```nginx
+auth { 
+  auth_bearer; 
+}
 ```
+**Effect**: Injects the HTTP header `Authorization: Bearer <channel.key>`.
 
-Effect: `Authorization: Bearer <channel.key>`
+## Custom Header Token
 
-## Custom header key
-
-```conf
-auth { auth_header_key "x-api-key"; }
+```nginx
+auth { 
+  auth_header_key "x-api-key"; 
+}
 ```
+**Effect**: Injects the HTTP header `x-api-key: <channel.key>`.
 
-Effect: `<Header-Name>: <channel.key>`
+## Provider OAuth Flows
 
-## OAuth exchange + bearer injection
+If your destination provider requires real-time OAuth token exchange before making requests (such as Google Cloud Vertex AI, or specific enterprise clouds), ONR can handle the automated exchange and refresh flows for you.
 
-```conf
+```nginx
 auth {
-  oauth_mode openai;
-  oauth_refresh_token $channel.key;
+  oauth_mode openai;  # supported: openai|gemini|qwen|claude|iflow|custom
   auth_oauth_bearer;
 }
 ```
 
-Use `custom` mode with explicit `oauth_token_url` and `oauth_form` when builtin modes do not fit.
+- `oauth_mode` enables runtime token exchange.
+- `auth_oauth_bearer` injects the resulting access token as a Bearer token.
 
+### Custom OAuth Parameters
+
+If using `oauth_mode custom;`, you can override any parameter from the token exchange process.
+
+```nginx
+auth {
+  oauth_token_url "https://auth.example.com/oauth/token";
+  oauth_client_id "my-client";
+  oauth_client_secret "my-secret";
+  oauth_refresh_token $channel.key;
+  
+  # Define the token response parsing structure
+  oauth_token_path "$.access_token";
+  oauth_expires_in_path "$.expires_in";
+}
+```

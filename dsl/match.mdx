@@ -1,19 +1,36 @@
 ---
-title: "match"
-description: "How requests select a rule (api + optional stream)."
+title: "Match Rules"
+description: "Conditional routing based on API endpoints."
 ---
 
-Supported forms:
+Match rules are used to selectively apply different configurations depending on what API the client is targeting, or whether the request is streaming.
 
-```conf
+## Syntax
+
+```nginx
 match api = "<api-name>" stream = true { ... }
 match api = "<api-name>" stream = false { ... }
 match api = "<api-name>" { ... }
 ```
 
-Semantics:
+### Routing Logic
 
-- v0.1 matches on `api` and optional `stream`.
-- First match wins (top-to-bottom).
-- If provider is selected but no match is found, ONR rejects with HTTP 400.
+- **Feature Scope (v0.1)**: Currently tests against the `api` type and an optional `stream` boolean.
+- **Top-to-Bottom Execution**: The **first match wins** based on appearance order in the file. Always put your most specific rules first, and general catch-all rules at the bottom.
+- **Strict Rejection**: If a provider is selected (e.g. via load balancing) but **no match** is found inside its config file, the request is rejected with **HTTP 400**. ONR does not silently fallback; you must explicitly define matching rules.
 
+### Supported API Values
+
+The `api` identifier is aligned with standard OpenAI-style endpoints (and specific extensions):
+
+- `completions`
+- `chat.completions`
+- `responses`
+- `claude.messages`
+- `embeddings`
+- `images.generations`
+- `audio.speech`
+- `audio.transcriptions`
+- `audio.translations`
+- `gemini.generateContent` (Gemini native: `POST /v1beta/models/{model}:generateContent`)
+- `gemini.streamGenerateContent` (Gemini native: `POST /v1beta/models/{model}:streamGenerateContent?alt=sse`)

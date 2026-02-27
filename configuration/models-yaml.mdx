@@ -1,12 +1,39 @@
 ---
 title: "models.yaml"
-description: "Model routing and round-robin across providers."
+description: "Model routing, aliasing, and load balancing across upstream providers."
 ---
 
-You can bind a model to one or more providers. If a model is bound to multiple providers, ONR selects providers by round-robin per model.
+The `models.yaml` file acts as the internal DNS for your gateway. It maps the model names requested by your clients to the specific upstream providers capable of fulfilling them.
 
-Selection priority:
+## File Structure
 
-1. `x-onr-provider` header (force)
-2. `models.yaml` routing (per model round-robin)
+```yaml
+models:
+  # The model string your client sends in their JSON request
+  gpt-4o-mini:
+    providers:
+      - openai
+      - azure-openai
+    strategy: round_robin
+    owned_by: open-next-router
+
+  claude-haiku-4-5:
+    providers:
+      - anthropic
+    strategy: round_robin
+```
+
+### Directives
+
+- `providers`: An array of provider names (these exact names must match your `.conf` files in the `providers` directory).
+- `strategy`: The load balancing strategy relative to the configured providers. Currently, `round_robin` is supported by default.
+- `owned_by`: (Optional) Overrides the internal owner metadata reported when querying `/v1/models`.
+
+## Routing Flow and Priority
+
+When a request arrives at ONR, the gateway must determine which provider's DSL to execute. It selects the upstream based on this strict priority:
+
+1. **Forced Override** (Highest): If the client explicitly maps a provider via the `x-onr-provider` HTTP header.
+2. **Model Registry Matching**: Iterating through your `models.yaml` dictionary to find a matching model string.
+3. **Round Robin Execution**: If the chosen model lists multiple providers, ONR will load-balance the requests across the array uniformly per request.
 

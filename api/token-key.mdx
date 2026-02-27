@@ -69,10 +69,9 @@ BYOK + provider + forced model (base64url upstream key):
 
 ## Generate token keys
 
-Use `onr-admin`:
+Use `onr-admin` to securely generate these tokens from your CLI without manually base64-encoding strings:
 
 ```bash
-make build
 onr-admin token create \
   --config ./onr.yaml \
   --access-key-name client-a \
@@ -80,14 +79,10 @@ onr-admin token create \
   --model gpt-4o-mini
 ```
 
-See [onr-admin CLI](/reference/onr-admin-cli) for more commands.
+See [Admin CLI](/ecosystem/admin-panel) for more commands and the web dashboard usage.
 
 ## Security notes
 
-- Token Key is intentionally editable (no signature). Treat it like a bearer secret.
-- Avoid putting plaintext secrets into URLs when possible. Prefer `k64` / `uk64` to reduce accidental escaping/logging issues, but note they are still secrets.
-- If you enable BYOK (`uk` / `uk64`), clients can supply their own upstream key. Consider whether that is acceptable for your deployment and logging policy.
-
-## More details
-
-The repository also contains a Chinese deep dive: `docs/ACCESS_KEYS_CN.md`.
+- **Tamperable By Design**: Token Key is intentionally editable (no cryptographic signature). Treat it like a pure bearer secret.
+- **Base64 Safety**: Avoid putting plaintext secrets into URLs when possible. Prefer `k64` / `uk64` to reduce accidental escaping or logging issues, but note they are still secrets (Base64 is not encryption).
+- **BYOK Risks**: If you enable BYOK (`uk` / `uk64`), clients can supply their own upstream key. Consider whether that is acceptable for your deployment and logging policy.
