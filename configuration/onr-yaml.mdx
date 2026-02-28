@@ -61,7 +61,10 @@ traffic_dump:
   dir: "./dumps"
   file_path: "{{.request_id}}.log"
   # Set mask_secrets to true to auto-redact bearer tokens
-  mask_secrets: true 
+  mask_secrets: true
+  # Optional allowlist. Empty means all sections are enabled.
+  # Allowed: meta, origin_request, upstream_request, upstream_response, proxy_response, stream
+  sections: []
 ```
 
 ## Access Logs & Rotation
