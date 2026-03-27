@@ -34,6 +34,30 @@ metrics {
 
 You can use the `$.items[*].x` JSONPath syntax to sum all numeric occurrences in an array.
 
+### Usage Facts
+
+For the new custom-first flow, use `usage_fact` to describe each measurable item explicitly.
+
+```nginx
+metrics {
+  usage_extract custom;
+
+  usage_fact input token path="$.usage.input_tokens";
+  usage_fact output token path="$.usage.output_tokens";
+  usage_fact cache_read token path="$.usage.cache_read_input_tokens";
+
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
+  usage_fact cache_write token path="$.usage.cache_creation_input_tokens" fallback=true;
+}
+```
+
+- `path`, `count_path`, `sum_path`, and `expr` are supported in the first batch.
+- `count_path` can be combined with `type` and `status` filters.
+- `attr.ttl` distinguishes Anthropic cache write tiers.
+- `fallback=true` uses a total field only when the more specific facts do not exist.
+- `source=...` is intentionally deferred for now.
+
 ## Formula & Arithmetic Configuration
 
 Alternatively, you can compute tokens dynamically based on math equations rather than strictly passing the exact path.
