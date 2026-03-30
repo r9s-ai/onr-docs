@@ -52,11 +52,81 @@ metrics {
 }
 ```
 
-- `path`, `count_path`, `sum_path`, and `expr` are supported in the first batch.
+- `path`, `count_path`, `sum_path`, and `expr` are supported.
 - `count_path` can be combined with `type` and `status` filters.
 - `attr.ttl` distinguishes Anthropic cache write tiers.
 - `fallback=true` uses a total field only when the more specific facts do not exist.
-- `source=...` is intentionally deferred for now.
+- `source` defaults to `response` and currently supports `response`, `request`, and `derived`.
+
+### Supported dimensions
+
+The current registry intentionally accepts a limited set of `dimension + unit` pairs:
+
+- Token and cache:
+  - `input token`
+  - `output token`
+  - `cache_read token`
+  - `cache_write token`
+- Tool usage:
+  - `server_tool.web_search call`
+  - `server_tool.file_search call`
+- Image and audio:
+  - `image.generate image`
+  - `image.edit image`
+  - `image.variation image`
+  - `audio.tts second`
+  - `audio.stt second`
+  - `audio.translate second`
+
+### Source examples
+
+OpenAI Responses tool usage:
+
+```nginx
+metrics {
+  usage_extract openai;
+
+  usage_fact server_tool.web_search call count_path="$.output[*]" type="web_search_call" status="completed";
+}
+```
+
+Image generation with request fallback:
+
+```nginx
+metrics {
+  usage_extract openai;
+
+  usage_fact image.generate image count_path="$.data[*]";
+  usage_fact image.generate image source=request expr="$.n" fallback=true;
+}
+```
+
+Speech synthesis with runtime-derived usage:
+
+```nginx
+metrics {
+  usage_extract openai;
+
+  usage_fact audio.tts second source=derived path="$.audio.tts.seconds";
+}
+```
+
+### Built-in provider extraction and supplemental facts
+
+`usage_extract openai;` still performs native parsing for standard OpenAI response shapes.
+In the current implementation it can also supplement canonical facts for:
+
+- `images.generations -> image.generate image`
+- `images.edits -> image.edit image`
+- `audio.transcriptions -> audio.stt second`
+- `audio.translations -> audio.translate second`
+- `audio.speech -> audio.tts second` when derived runtime usage is available
+- `responses -> server_tool.web_search call`
+
+This lets provider authors choose between:
+
+- relying on the built-in parser and only overriding special cases with explicit `usage_fact`;
+- or using a fully explicit custom-first configuration.
 
 ## Formula & Arithmetic Configuration
 

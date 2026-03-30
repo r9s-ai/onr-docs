@@ -3,8 +3,87 @@ title: "Writing Providers"
 description: "Add a new Native Provider adapter."
 ---
 
-## Implementing the interface
+Most providers should start with the DSL rather than a new Go adapter.
 
-A look into the `provider` interface, struct registration, and request-response mappings for adding new LLM vendors natively.
+## Start with the DSL
 
-More detailed content coming soon.
+Use the provider DSL to describe request routing, response mapping, and usage extraction
+first. Add native Go code only when the provider requires request/response rewriting or
+runtime-derived metrics that the DSL cannot express yet.
+
+Typical skeleton:
+
+```nginx
+provider "example" {
+  match api = "chat.completions" {
+    metrics {
+      usage_extract custom;
+      finish_reason_extract custom;
+
+      usage_fact input token path="$.usage.input_tokens";
+      usage_fact output token path="$.usage.output_tokens";
+    }
+
+    upstream {
+      set_path "/v1/chat/completions";
+    }
+  }
+}
+```
+
+## Prefer explicit `usage_fact`
+
+Current `usage_fact` supports three data sources:
+
+- `source=response` (default)
+- `source=request`
+- `source=derived`
+
+Examples:
+
+```nginx
+metrics {
+  usage_extract custom;
+
+  usage_fact image.generate image count_path="$.data[*]";
+  usage_fact image.generate image source=request expr="$.n" fallback=true;
+}
+```
+
+```nginx
+metrics {
+  usage_extract custom;
+
+  usage_fact audio.tts second source=derived path="$.audio.tts.seconds";
+}
+```
+
+```nginx
+metrics {
+  usage_extract custom;
+
+  usage_fact server_tool.web_search call count_path="$.output[*]" type="web_search_call" status="completed";
+}
+```
+
+## When native code is still needed
+
+Keep native Go code as small as possible and treat it as a provider-specific usage
+derivation helper, not a second billing system. Native code is still appropriate when:
+
+- the provider returns binary output and usage must be derived from bytes or media duration;
+- the provider uses stream or realtime event aggregation;
+- the provider requires request rewriting that the DSL cannot express cleanly yet.
+
+For OpenAI specialized APIs, ONR already reuses a shared provider-usage helper layer for:
+
+- image generation and edit counts
+- speech duration and audio token estimation
+- transcription and translation response usage
+- Responses API `web_search_call` counting
+
+The preferred path is:
+
+1. express request/response matching in the DSL,
+2. express usage with `usage_fact`,
+3. add native helper code only for the irreducible derived pieces.
