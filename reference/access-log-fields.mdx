@@ -108,6 +108,33 @@ Note:
 | `$cost_channel` | Channel identifier used for cost attribution (if available). |
 | `$cost_unit` | Cost unit (implementation-defined; depends on pricing config). |
 
+Flat usage extras:
+
+- When `usage_extract custom;` uses `usage_fact ...` with non-legacy detail, ONR also emits flattened usage fields into the access log.
+- These keys are appended directly as normal log variables and follow a snake_case convention derived from `dimension + attributes + unit`.
+- Legacy scalar usage stays unchanged: `input_tokens`, `output_tokens`, `total_tokens`, `cache_read_tokens`, `cache_write_tokens`.
+- Typical examples:
+  - `$cache_write_ttl_5m_tokens`
+  - `$cache_write_ttl_1h_tokens`
+  - `$server_tool_web_search_calls`
+  - `$image_generate_images`
+  - `$image_edit_images`
+  - `$audio_tts_seconds`
+  - `$audio_stt_seconds`
+  - `$audio_translate_seconds`
+- For Anthropic non-stream `/v1/messages`, `cache_write token attr.ttl="5m"` and `attr.ttl="1h"` can therefore appear both as:
+  - `$cache_write_tokens`
+  - `$cache_write_ttl_5m_tokens`
+  - `$cache_write_ttl_1h_tokens`
+- The same flattening applies to canonical image/audio/tool facts extracted by ONR or
+  produced by `usage_extract openai;`, for example:
+  - `image.generate image`
+  - `image.edit image`
+  - `audio.tts second`
+  - `audio.stt second`
+  - `audio.translate second`
+- These flattened keys are only present when the corresponding `usage_fact` matched or was produced with quantity `0` from an upstream response that included the field.
+
 **Upstream and streaming performance**
 
 | Variable | Meaning |
