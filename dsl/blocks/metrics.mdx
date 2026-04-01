@@ -15,6 +15,75 @@ metrics { usage_extract anthropic; }
 metrics { usage_extract gemini; }
 ```
 
+Relationship between builtin modes and `custom`:
+
+- `gemini`: the current builtin behavior can be fully replaced by `custom`.
+- `anthropic`: `custom` can cover the same core token/cache extraction, including streaming, but the config is more verbose because stream events may place usage under either `message.usage` or top-level `usage`.
+- `openai`: `custom` covers the core token/cache extraction, but builtin image/audio/tool supplemental facts still require extra explicit `usage_fact` rules.
+
+For Gemini output tokens, both of the following styles are valid in `custom` mode:
+
+```nginx
+# Summed implicitly because both rules share the same dimension + unit
+metrics {
+  usage_extract custom;
+  usage_fact output token path="$.usageMetadata.candidatesTokenCount";
+  usage_fact output token path="$.usageMetadata.thoughtsTokenCount";
+}
+
+# Equivalent explicit arithmetic form
+metrics {
+  usage_extract custom;
+  output_tokens_expr = $.usageMetadata.candidatesTokenCount + $.usageMetadata.thoughtsTokenCount;
+}
+```
+
+Anthropic streaming `custom` sketch:
+
+```nginx
+metrics {
+  usage_extract custom;
+  usage_fact input token path="$.usage.input_tokens";
+  usage_fact input token path="$.message.usage.input_tokens";
+  usage_fact output token path="$.usage.output_tokens";
+  usage_fact output token path="$.message.usage.output_tokens";
+  usage_fact cache_read token path="$.usage.cache_read_input_tokens";
+  usage_fact cache_read token path="$.message.usage.cache_read_input_tokens";
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
+  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
+  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
+  usage_fact cache_write token path="$.usage.cache_creation_input_tokens" fallback=true;
+  usage_fact cache_write token path="$.message.usage.cache_creation_input_tokens" fallback=true;
+}
+```
+
+OpenAI supplemental facts `custom` sketches:
+
+```nginx
+# responses: completed web search calls
+metrics {
+  usage_extract custom;
+  usage_fact input token path="$.usage.input_tokens";
+  usage_fact output token path="$.usage.output_tokens";
+  usage_fact server_tool.web_search call count_path="$.output[*]" type="web_search_call" status="completed";
+}
+
+# images.generations
+metrics {
+  usage_extract custom;
+  usage_fact input token path="$.usage.input_tokens";
+  usage_fact output token path="$.usage.output_tokens";
+  usage_fact image.generate image count_path="$.data[*]";
+}
+
+# audio.speech
+metrics {
+  usage_extract custom;
+  usage_fact audio.tts second source=derived path="$.audio_duration_seconds";
+}
+```
+
 ### Custom Token Extraction
 
 If a provider hides tokens in a weird JSON path, you can map them dynamically.
@@ -55,10 +124,27 @@ metrics {
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
 - `count_path` can be combined with `type` and `status` filters.
 - `attr.ttl` distinguishes Anthropic cache write tiers.
+- Multiple `usage_fact` rules may share the same `dimension + unit`; all matched non-fallback rules are summed.
 - `fallback=true` uses a total field only when the more specific facts do not exist.
 - `source` defaults to `response` and currently supports `response`, `request`, and `derived`.
+- `dimension` is a flat registry key; `.` is part of the name and does not imply nesting.
 
 ### Supported dimensions
+
+- `input`
+- `output`
+- `cache_read`
+- `cache_write`
+- `server_tool.web_search`
+- `server_tool.file_search`
+- `image.generate`
+- `image.edit`
+- `image.variation`
+- `audio.tts`
+- `audio.stt`
+- `audio.translate`
+
+### Supported dimension + unit pairs
 
 The current registry intentionally accepts a limited set of `dimension + unit` pairs:
 
@@ -136,12 +222,10 @@ Alternatively, you can compute tokens dynamically based on math equations rather
 metrics {
   input_tokens_expr = "$.usage.in";
   output_tokens_expr = "$.usage.out";
-  
-  # Total defaults to input + output automatically, 
-  # or you can override it:
-  total_tokens_expr = "$.usage.total";
 }
 ```
+
+`total_tokens` is derived from `input + output` automatically. In most cases, avoid setting `total_tokens_expr` explicitly, because it introduces a second total fact source that can drift from the totals derived from `input` and `output`.
 
 ## Finish Reason Extraction
 
