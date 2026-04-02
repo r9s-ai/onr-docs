@@ -17,7 +17,7 @@ metrics { usage_extract gemini; }
 
 Relationship between builtin modes and `custom`:
 
-- `gemini`: the current builtin behavior can be fully replaced by `custom`.
+- `gemini`: the current builtin behavior can be fully replaced by `custom`; builtin now treats `input token` as `TEXT`-modality input first, then falls back to `promptTokenCount`, and also emits `image.input/audio.input/video.input token` facts when available.
 - `anthropic`: `custom` can cover the same core token/cache extraction, including streaming, but the config is more verbose because stream events may place usage under either `message.usage` or top-level `usage`.
 - `openai`: `custom` covers the core token/cache extraction, but builtin image/audio/tool supplemental facts still require extra explicit `usage_fact` rules.
 
@@ -122,17 +122,23 @@ metrics {
 ```
 
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
+- String values may use either double quotes or single quotes.
 - `count_path` can be combined with `type` and `status` filters.
 - `attr.ttl` distinguishes Anthropic cache write tiers.
 - Multiple `usage_fact` rules may share the same `dimension + unit`; all matched non-fallback rules are summed.
 - `fallback=true` uses a total field only when the more specific facts do not exist.
 - `source` defaults to `response` and currently supports `response`, `request`, and `derived`.
 - `dimension` is a flat registry key; `.` is part of the name and does not imply nesting.
+- For filter JSONPath, single-quoted DSL strings avoid escaping inner double quotes, for example:
+  - `path='$.usageMetadata.promptTokensDetails[?(@.modality=="AUDIO")].tokenCount'`
 
 ### Supported dimensions
 
 - `input`
 - `output`
+- `image.input`
+- `video.input`
+- `audio.input`
 - `cache_read`
 - `cache_write`
 - `server_tool.web_search`
@@ -151,6 +157,9 @@ The current registry intentionally accepts a limited set of `dimension + unit` p
 - Token and cache:
   - `input token`
   - `output token`
+  - `image.input token`
+  - `video.input token`
+  - `audio.input token`
   - `cache_read token`
   - `cache_write token`
 - Tool usage:
@@ -194,6 +203,23 @@ metrics {
   usage_extract openai;
 
   usage_fact audio.tts second source=derived path="$.audio.tts.seconds";
+}
+```
+
+Gemini native multimodal input tokens:
+
+```nginx
+metrics {
+  usage_extract custom;
+
+  usage_fact input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="TEXT")].tokenCount';
+  usage_fact input token path="$.usageMetadata.promptTokenCount" fallback=true;
+  usage_fact image.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="IMAGE")].tokenCount';
+  usage_fact video.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="VIDEO")].tokenCount';
+  usage_fact audio.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="AUDIO")].tokenCount';
+
+  usage_fact output token path="$.usageMetadata.candidatesTokenCount";
+  usage_fact output token path="$.usageMetadata.thoughtsTokenCount";
 }
 ```
 
