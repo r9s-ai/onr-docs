@@ -10,16 +10,20 @@ To track token usage, enforce quotas, and build accurate dashboards, ONR needs t
 The `usage_extract` directive applies native parsing strategies tailored to standard provider schemas:
 
 ```nginx
-metrics { usage_extract openai; }
-metrics { usage_extract anthropic; }
-metrics { usage_extract gemini; }
+metrics { usage_extract openai_chat_completions; }
+metrics { usage_extract anthropic_messages; }
+metrics { usage_extract gemini_generate_content; }
 ```
 
-Relationship between builtin modes and `custom`:
+Use global `usage_mode` presets or `custom`. The default repository config focuses on the more specific presets from `config/modes/usage_modes.conf`, such as `openai_chat_completions`, `openai_prompt_completion`, `openai_responses`, `openai_responses_stream`, `anthropic_messages`, `anthropic_messages_stream`, `gemini_generate_content`, and `gemini_generate_content_stream`.
+Generic names such as `openai`, `anthropic`, and `gemini` are no longer special builtin `usage_extract` modes. If you want them, define them explicitly as global `usage_mode` presets.
+Inside `metrics`, declaring `usage_fact`, `*_tokens_path`, or `*_tokens_expr` without `usage_extract` is equivalent to `usage_extract custom;`.
 
-- `gemini`: the current builtin behavior can be fully replaced by `custom`; builtin now treats `input token` as `TEXT`-modality input first, then falls back to `promptTokenCount`, and also emits `image.input/audio.input/video.input token` facts when available.
+Migration notes for the old generic provider modes:
+
+- `gemini`: the current default preset behavior can be fully replaced by `custom`; `input token` usually prefers `TEXT`-modality input first, then falls back to `promptTokenCount`, and multimodal details can be exposed as `image.input/audio.input/video.input token` facts.
 - `anthropic`: `custom` can cover the same core token/cache extraction, including streaming, but the config is more verbose because stream events may place usage under either `message.usage` or top-level `usage`.
-- `openai`: `custom` covers the core token/cache extraction, but builtin image/audio/tool supplemental facts still require extra explicit `usage_fact` rules.
+- `openai`: `custom` covers the core token/cache extraction, but image/audio/tool supplemental facts still require extra explicit `usage_fact` rules.
 
 For Gemini output tokens, both of the following styles are valid in `custom` mode:
 
@@ -42,19 +46,20 @@ Anthropic streaming `custom` sketch:
 
 ```nginx
 metrics {
-  usage_extract custom;
-  usage_fact input token path="$.usage.input_tokens";
-  usage_fact input token path="$.message.usage.input_tokens";
-  usage_fact output token path="$.usage.output_tokens";
-  usage_fact output token path="$.message.usage.output_tokens";
-  usage_fact cache_read token path="$.usage.cache_read_input_tokens";
-  usage_fact cache_read token path="$.message.usage.cache_read_input_tokens";
-  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
-  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
-  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
-  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
-  usage_fact cache_write token path="$.usage.cache_creation_input_tokens" fallback=true;
-  usage_fact cache_write token path="$.message.usage.cache_creation_input_tokens" fallback=true;
+  usage_fact input token path="$.message.usage.input_tokens" event="message_start";
+  usage_fact input token path="$.message.usage.cache_read_input_tokens" event="message_start";
+  usage_fact input token path="$.message.usage.cache_creation_input_tokens" event="message_start";
+  usage_fact input token path="$.usage.cache_read_input_tokens" event="message_delta";
+  usage_fact input token path="$.usage.cache_creation_input_tokens" event="message_delta";
+  usage_fact output token path="$.usage.output_tokens" event="message_delta";
+  usage_fact cache_read token path="$.message.usage.cache_read_input_tokens" event="message_start";
+  usage_fact cache_read token path="$.usage.cache_read_input_tokens" event="message_delta";
+  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m" event="message_start";
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m" event="message_delta";
+  usage_fact cache_write token path="$.message.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h" event="message_start";
+  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h" event="message_delta";
+  usage_fact cache_write token path="$.message.usage.cache_creation_input_tokens" fallback=true event="message_start";
+  usage_fact cache_write token path="$.usage.cache_creation_input_tokens" fallback=true event="message_delta";
 }
 ```
 
@@ -109,8 +114,6 @@ For the new custom-first flow, use `usage_fact` to describe each measurable item
 
 ```nginx
 metrics {
-  usage_extract custom;
-
   usage_fact input token path="$.usage.input_tokens";
   usage_fact output token path="$.usage.output_tokens";
   usage_fact cache_read token path="$.usage.cache_read_input_tokens";
@@ -124,6 +127,8 @@ metrics {
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
 - String values may use either double quotes or single quotes.
 - `count_path` can be combined with `type` and `status` filters.
+- `event="..."` optionally restricts a `usage_fact` rule to matching SSE `event:` names.
+- `event_optional=true` may be combined with `event="..."` when an upstream stream sometimes omits SSE `event:` framing.
 - `attr.ttl` distinguishes Anthropic cache write tiers.
 - Multiple `usage_fact` rules may share the same `dimension + unit`; all matched non-fallback rules are summed.
 - `fallback=true` uses a total field only when the more specific facts do not exist.
@@ -179,7 +184,7 @@ OpenAI Responses tool usage:
 
 ```nginx
 metrics {
-  usage_extract openai;
+  usage_extract openai_responses;
 
   usage_fact server_tool.web_search call count_path="$.output[*]" type="web_search_call" status="completed";
 }
@@ -189,7 +194,7 @@ Image generation with request fallback:
 
 ```nginx
 metrics {
-  usage_extract openai;
+  usage_extract openai_images_generations;
 
   usage_fact image.generate image count_path="$.data[*]";
   usage_fact image.generate image source=request expr="$.n" fallback=true;
@@ -200,7 +205,7 @@ Speech synthesis with runtime-derived usage:
 
 ```nginx
 metrics {
-  usage_extract openai;
+  usage_extract openai_audio_speech;
 
   usage_fact audio.tts second source=derived path="$.audio.tts.seconds";
 }
@@ -223,10 +228,9 @@ metrics {
 }
 ```
 
-### Built-in provider extraction and supplemental facts
+### OpenAI-specific presets and supplemental facts
 
-`usage_extract openai;` still performs native parsing for standard OpenAI response shapes.
-In the current implementation it can also supplement canonical facts for:
+The repository's OpenAI-specific presets commonly model canonical facts such as:
 
 - `images.generations -> image.generate image`
 - `images.edits -> image.edit image`
@@ -235,10 +239,7 @@ In the current implementation it can also supplement canonical facts for:
 - `audio.speech -> audio.tts second` when derived runtime usage is available
 - `responses -> server_tool.web_search call`
 
-This lets provider authors choose between:
-
-- relying on the built-in parser and only overriding special cases with explicit `usage_fact`;
-- or using a fully explicit custom-first configuration.
+This lets provider authors choose between reusable named presets and a fully explicit custom-first configuration.
 
 ## Formula & Arithmetic Configuration
 
@@ -258,12 +259,24 @@ metrics {
 Similar to usage Extraction, you can instruct ONR where to look for the "stop" string (e.g. `stop`, `length`, `tool_calls`) indicating why generation ceased.
 
 ```nginx
-metrics { finish_reason_extract openai; }
-metrics { finish_reason_extract anthropic; }
+metrics { finish_reason_extract openai_chat_completions; }
+metrics { finish_reason_extract anthropic_messages; }
 
 # Custom location override:
-metrics {
-  finish_reason_extract custom; 
-  finish_reason_path "$.choices[0].finish_reason"; 
+metrics { finish_reason_path "$.choices[0].finish_reason"; }
+```
+
+Inside `metrics`, declaring `finish_reason_path` without `finish_reason_extract` is equivalent to `finish_reason_extract custom;`.
+
+Like usage extraction, finish reason extraction also supports reusable top-level presets:
+
+```nginx
+finish_reason_mode "anthropic_messages_stream" {
+  finish_reason_path "$.delta.stop_reason";
+  finish_reason_path "$.message.stop_reason" fallback=true;
 }
 ```
+
+The default repository config keeps these presets in `config/modes/finish_reason_modes.conf`, which is included by `config/onr.conf`.
+The default repository config focuses on path-specific presets such as `openai_chat_completions`, `openai_completions`, `openai_responses`, `anthropic_messages`, `anthropic_messages_stream`, `gemini_generate_content`, and `gemini_generate_content_stream`.
+Generic names such as `openai`, `anthropic`, and `gemini` are no longer special builtin `finish_reason_extract` modes. If you want them, define them explicitly as global `finish_reason_mode` presets.

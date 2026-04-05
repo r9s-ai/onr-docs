@@ -7,6 +7,24 @@ The `balance` block instructs ONR on how to query and parse the remaining credit
 
 This is particularly useful when combined with the Admin Panel CLI or Web UI to monitor your credential fleet automatically.
 
+Global reusable presets can now be declared in `config/modes/balance_modes.conf` and included from `config/onr.conf`:
+
+```nginx
+balance_mode "openai" {
+  usage_path "/v9/dashboard/billing/usage";
+}
+```
+
+```nginx
+provider "demo" {
+  defaults {
+    balance {
+      balance_mode openai;
+    }
+  }
+}
+```
+
 ## Syntax
 
 ```nginx
@@ -19,6 +37,8 @@ balance {
 
 - `openai`: Leverages standard OpenAI Dashboard endpoints to report remaining USD.
 - `custom`: Explicitly fetch and parse an arbitrary JSON endpoint.
+
+In this repository's default config, `config/modes/balance_modes.conf` also declares `openai` as a global `balance_mode` preset, so it can be overridden in DSL if needed.
 
 ## Custom Balance Parsing
 

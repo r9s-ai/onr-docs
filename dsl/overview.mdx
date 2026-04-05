@@ -7,10 +7,10 @@ Open Next Router (ONR) uses a custom, nginx-like Domain Specific Language (DSL) 
 
 ## Where are configs stored?
 
-Provider configs live under `config/providers/*.conf` in the ONR environment and are loaded at startup.
-The directory can be customized via the `providers.dir` setting in `onr.yaml` or via the `ONR_PROVIDERS_DIR` environment variable.
+The main DSL entry point is typically `config/onr.conf` in the ONR environment, and that file usually includes `config/providers/*.conf` plus global preset files under `config/modes/*.conf`.
+You can still force directory mode via the `providers.dir` setting in `onr.yaml` or via the `ONR_PROVIDERS_DIR` environment variable.
 
-Whenever you modify these files, ONR can reload them dynamically without dropping traffic (via the Admin Panel or API).
+Whenever you modify these DSL files, ONR can reload them dynamically without dropping traffic (via the Admin Panel or API).
 
 ## File Structure
 

@@ -8,7 +8,7 @@ Send SIGHUP to reload:
 - `onr.yaml`
 - `keys.yaml`
 - `models.yaml`
-- `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers))
+- `config/onr.conf` and any DSL files it includes (commonly `config/providers/*.conf` and `config/modes/*.conf`)
 
 Using the CLI:
 
@@ -27,4 +27,4 @@ providers:
     debounce_ms: 300
 ```
 
-When enabled, ONR watches `providers.dir` and reloads provider DSL files automatically.
+When enabled, ONR watches the resolved provider DSL source directory and reloads included DSL files automatically.

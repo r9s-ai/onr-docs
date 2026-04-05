@@ -13,7 +13,7 @@ Open Next Router (ONR) routes requests, applies opt-in compatibility transforms,
 </div>
 
 <Callout type="info" title="Design principle">
-  Runtime behavior must be described explicitly by DSL directives in `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)). The runtime proxy stays an execution engine, not a guessing layer.
+  Runtime behavior must be described explicitly by DSL directives loaded from `config/onr.conf`, which typically includes files under `config/providers/*.conf` (see [config/onr.conf](https://github.com/r9s-ai/open-next-router/tree/main/config/onr.conf)). The runtime proxy stays an execution engine, not a guessing layer.
 </Callout>
 
 ## Architecture at a Glance
@@ -55,7 +55,7 @@ flowchart TD
 
     subgraph Configs ["Configuration Files"]
         direction LR
-        DSLConf("providers/*.conf<br/>(Routing Rules)")
+        DSLConf("onr.conf + included .conf files<br/>(Routing Rules)")
         OnrYaml("onr.yaml<br/>(Gateway Config)")
         KeysYaml("keys.yaml<br/>(Access Control)")
         ModelsYaml("models.yaml<br/>(Model DNS)")

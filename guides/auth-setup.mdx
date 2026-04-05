@@ -11,7 +11,7 @@ Open Next Router (ONR) abstracts this entirely. Your clients (the users of your 
 
 The most common approach for providers like OpenAI, Anthropic, or DeepSeek is a simple static API key.
 
-When you configure `keys.yaml`, you map a client token to an upstream profile. In your provider DSL `config/providers/*.conf`, you define how ONR injects the upstream key (accessible dynamically as `$channel.key`).
+When you configure `keys.yaml`, you map a client token to an upstream profile. In the DSL loaded from `config/onr.conf` and its included provider files, you define how ONR injects the upstream key (accessible dynamically as `$channel.key`).
 
 ### Bearer Token
 ```nginx

@@ -25,7 +25,7 @@ go run ./cmd/onr -t -c ./onr.yaml
 
 ## Reload (nginx-like)
 
-After editing `onr.yaml` / `keys.yaml` / `models.yaml` / `config/providers/*.conf` (see [config/providers](https://github.com/r9s-ai/open-next-router/tree/main/config/providers)):
+After editing `onr.yaml` / `keys.yaml` / `models.yaml` / `config/onr.conf` or any DSL file it includes (commonly `config/providers/*.conf`, see [config/onr.conf](https://github.com/r9s-ai/open-next-router/tree/main/config/onr.conf)):
 
 ```bash
 go run ./cmd/onr --config ./onr.yaml -s reload

@@ -5,9 +5,27 @@ description: "Configuring dynamic model listings."
 
 The `models` block (available inside `defaults` blocks only in v0.1) controls how ONR queries and parses the `GET /v1/models` endpoint of an upstream provider to populate its internal registry or Admin Page proxy.
 
+Global reusable presets can now be declared in `config/modes/models_modes.conf` and included from `config/onr.conf`:
+
+```nginx
+models_mode "openai" {
+  path "/v2/models";
+}
+```
+
+```nginx
+provider "demo" {
+  defaults {
+    models {
+      models_mode openai;
+    }
+  }
+}
+```
+
 ## Built-In Handlers
 
-You can rely on built-in parser presets for standard providers:
+You can rely on built-in parser presets for standard providers. In this repository's default config, the same names are declared in `config/modes/models_modes.conf` as global `models_mode` presets:
 
 ```nginx
 models {
