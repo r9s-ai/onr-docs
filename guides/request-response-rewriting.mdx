@@ -38,6 +38,42 @@ request {
 }
 ```
 
+## Wrapping Responses Text Input
+
+Some clients send a simple string as `input`, while an upstream expects the OpenAI Responses message-list shape.
+
+```nginx
+request {
+  json_wrap_input_text "$.input";
+}
+```
+
+This converts:
+
+```json
+{ "input": "Generate an image of gray tabby cat hugging an otter with an orange scarf" }
+```
+
+into:
+
+```json
+{
+  "input": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Generate an image of gray tabby cat hugging an otter with an orange scarf"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Missing `input` fields and values that are already arrays are left unchanged. Other value types are rejected.
+
 ## Cross-Provider Schema Mapping
 
 One of ONR's superpowers is translating an OpenAI-formatted `chat.completions` array into a format understood by Google Gemini or Anthropic Claude, and seamlessly re-mapping the response back instantly.

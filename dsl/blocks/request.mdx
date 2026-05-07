@@ -45,11 +45,13 @@ request {
   json_set_if_absent "$.instructions" "";
   
   json_rename "$.max_tokens" "$.max_completion_tokens";
+  json_wrap_input_text "$.input";
   json_del "$.tools";
 }
 ```
 - Supports a subset of object-path JSONPath expressions (e.g. `$.a.b.c`).
 - `json_set` values support primitives (`true`, `false`, `null`, integers, strings) or expressions (like `concat(...)`).
+- `json_wrap_input_text` converts a string field into an OpenAI Responses `input` message list, leaves missing or already-array values unchanged, and rejects other types.
 
 ## Structural Request Mapping
 
