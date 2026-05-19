@@ -111,19 +111,25 @@ You can use the `$.items[*].x` JSONPath syntax to sum all numeric occurrences in
 ### Usage Facts
 
 For the new custom-first flow, use `usage_fact` to describe each measurable item explicitly.
+Use `usage_root` first when the upstream response has a nested usage object and most facts should read from that object.
 
 ```nginx
 metrics {
-  usage_fact input token path="$.usage.input_tokens";
-  usage_fact output token path="$.usage.output_tokens";
-  usage_fact cache_read token path="$.usage.cache_read_input_tokens";
+  usage_root path="$.usage";
 
-  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
-  usage_fact cache_write token path="$.usage.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
-  usage_fact cache_write token path="$.usage.cache_creation_input_tokens" fallback=true;
+  usage_fact input token path="$.input_tokens";
+  usage_fact output token path="$.output_tokens";
+  usage_fact cache_read token path="$.cache_read_input_tokens";
+
+  usage_fact cache_write token path="$.cache_creation.ephemeral_5m_input_tokens" attr.ttl="5m";
+  usage_fact cache_write token path="$.cache_creation.ephemeral_1h_input_tokens" attr.ttl="1h";
+  usage_fact cache_write token path="$.cache_creation_input_tokens" fallback=true;
 }
 ```
 
+- `usage_root path="..."` extracts a usage JSON object before facts run.
+- Multiple `usage_root` rules merge into one usage object; later non-zero fields can fill or replace earlier zero fields.
+- `event="a|b"` can restrict `usage_root` or `usage_fact` to specific SSE event names.
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
 - String values may use either double quotes or single quotes.
 - `count_path` can be combined with `type` and `status` filters.
@@ -132,7 +138,8 @@ metrics {
 - `attr.ttl` distinguishes Anthropic cache write tiers.
 - Multiple `usage_fact` rules may share the same `dimension + unit`; all matched non-fallback rules are summed.
 - `fallback=true` uses a total field only when the more specific facts do not exist.
-- `source` defaults to `response` and currently supports `response`, `request`, and `derived`.
+- `source` defaults to the merged `usage_root` when configured; otherwise it defaults to `response`.
+- `source` currently supports `usage`, `response`, `request`, and `derived`.
 - `dimension` is a flat registry key; `.` is part of the name and does not imply nesting.
 - For filter JSONPath, single-quoted DSL strings avoid escaping inner double quotes, for example:
   - `path='$.usageMetadata.promptTokensDetails[?(@.modality=="AUDIO")].tokenCount'`
