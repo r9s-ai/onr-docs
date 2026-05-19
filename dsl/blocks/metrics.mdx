@@ -129,6 +129,7 @@ metrics {
 
 - `usage_root path="..."` extracts a usage JSON object before facts run.
 - Multiple `usage_root` rules merge into one usage object; later non-zero fields can fill or replace earlier zero fields.
+- In stream extraction, ONR merges usage roots from chunks first, then runs default-source / `source=usage` facts once at stream end. Explicit `source=response`, `request`, and `derived` facts still run during chunk processing.
 - `event="a|b"` can restrict `usage_root` or `usage_fact` to specific SSE event names.
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
 - String values may use either double quotes or single quotes.
