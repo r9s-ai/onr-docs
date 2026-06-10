@@ -21,7 +21,7 @@ Inside `metrics`, declaring `usage_fact`, `*_tokens_path`, or `*_tokens_expr` wi
 
 Migration notes for the old generic provider modes:
 
-- `gemini`: the current default preset behavior can be fully replaced by `custom`; `input token` usually prefers `TEXT`-modality input first, then falls back to `promptTokenCount`, and multimodal details can be exposed as `image.input/audio.input/video.input token` facts.
+- `gemini`: the current default preset behavior can be fully replaced by `custom`; `input token` should read the total input token count, and multimodal details can be exposed as `input.image/input.audio/input.video token` facts.
 - `anthropic`: `custom` can cover the same core token/cache extraction, including streaming, but the config is more verbose because stream events may place usage under either `message.usage` or top-level `usage`.
 - `openai`: `custom` covers the core token/cache extraction, but image/audio/tool supplemental facts still require extra explicit `usage_fact` rules.
 
@@ -149,9 +149,12 @@ metrics {
 
 - `input`
 - `output`
-- `image.input`
-- `video.input`
-- `audio.input`
+- `input.image`
+- `input.video`
+- `input.audio`
+- `output.image`
+- `output.video`
+- `output.audio`
 - `cache_read`
 - `cache_write`
 - `server_tool.web_search`
@@ -170,9 +173,12 @@ The current registry intentionally accepts a limited set of `dimension + unit` p
 - Token and cache:
   - `input token`
   - `output token`
-  - `image.input token`
-  - `video.input token`
-  - `audio.input token`
+  - `input.image token`
+  - `input.video token`
+  - `input.audio token`
+  - `output.image token`
+  - `output.video token`
+  - `output.audio token`
   - `cache_read token`
   - `cache_write token`
 - Tool usage:
@@ -225,11 +231,10 @@ Gemini native multimodal input tokens:
 metrics {
   usage_extract custom;
 
-  usage_fact input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="TEXT")].tokenCount';
-  usage_fact input token path="$.usageMetadata.promptTokenCount" fallback=true;
-  usage_fact image.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="IMAGE")].tokenCount';
-  usage_fact video.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="VIDEO")].tokenCount';
-  usage_fact audio.input token path='$.usageMetadata.promptTokensDetails[?(@.modality=="AUDIO")].tokenCount';
+  usage_fact input token path="$.usageMetadata.promptTokenCount";
+  usage_fact input.image token path='$.usageMetadata.promptTokensDetails[?(@.modality=="IMAGE")].tokenCount';
+  usage_fact input.video token path='$.usageMetadata.promptTokensDetails[?(@.modality=="VIDEO")].tokenCount';
+  usage_fact input.audio token path='$.usageMetadata.promptTokensDetails[?(@.modality=="AUDIO")].tokenCount';
 
   usage_fact output token path="$.usageMetadata.candidatesTokenCount";
   usage_fact output token path="$.usageMetadata.thoughtsTokenCount";
