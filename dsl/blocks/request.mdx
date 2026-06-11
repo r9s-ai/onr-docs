@@ -61,6 +61,22 @@ Use `req_map` to apply heavy, cross-provider schema transformations (such as con
 request { req_map <mode>; }
 ```
 
+Use `after_req_map` when a request JSON mutation must run after the structural mapping step.
+
+```nginx
+request {
+  req_map openai_chat_to_anthropic_messages;
+
+  after_req_map {
+    json_set "$.anthropic_version" "bedrock-2023-05-31";
+    json_del_if_missing "$.tool_choice" "$.tools";
+  }
+}
+```
+
+- Only request JSON mutation directives are allowed inside `after_req_map`.
+- If no `req_map` is configured, `after_req_map` runs after the normal request JSON operations.
+
 ### Built-in Modes (v0.1)
 
 - `openai_chat_to_openai_responses`
