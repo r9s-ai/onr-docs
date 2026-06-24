@@ -41,11 +41,11 @@ models {
 
 ```nginx
 models {
-  models_mode vertex;    # Default query path: /v1/projects/${credential.project_id}/locations/${channel.location}/models
+  models_mode vertex;    # Default query path: /v1beta1/publishers/google/models
 }
 ```
 
-The `vertex` preset requires credential metadata from the selected upstream key. Configure `credential_file` and `location` in `keys.yaml`; use `base_url_override` for regional Vertex hosts.
+The `vertex` preset lists Google publisher base models. It requires credential metadata from the selected upstream key. Configure `credential_file` and `location` in `keys.yaml`; use `base_url_override` for regional Vertex hosts.
 
 ## Custom Model Parsers
 
