@@ -31,6 +31,37 @@ provider "example" {
 }
 ```
 
+For credential-aware providers such as Vertex AI, keep the runtime-specific values in
+`keys.yaml` and reference them through DSL variables:
+
+```nginx
+provider "vertex" {
+  defaults {
+    upstream_config {
+      base_url = "https://aiplatform.googleapis.com";
+    }
+
+    auth {
+      oauth_mode google_service_account_file;
+      oauth_scope "https://www.googleapis.com/auth/cloud-platform";
+      auth_oauth_bearer;
+    }
+
+    request {
+      set_header "x-goog-user-project" template("${credential.project_id}");
+    }
+  }
+
+  match api = "gemini.generateContent" {
+    upstream {
+      set_path template("/v1/projects/${credential.project_id}/locations/${channel.location}/publishers/google/models/${request.model_mapped}:generateContent");
+    }
+  }
+}
+```
+
+Use `base_url_override` in `keys.yaml` when a deployment needs a regional endpoint, for example `https://us-central1-aiplatform.googleapis.com`.
+
 ## Prefer explicit `usage_fact`
 
 Current `usage_fact` supports three data sources:

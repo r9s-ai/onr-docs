@@ -33,13 +33,36 @@ If your destination provider requires real-time OAuth token exchange before maki
 
 ```nginx
 auth {
-  oauth_mode openai;  # supported: openai|gemini|qwen|claude|iflow|custom
+  oauth_mode openai;  # supported: openai|gemini|qwen|claude|iflow|antigravity|kimi|google_service_account_file|custom
   auth_oauth_bearer;
 }
 ```
 
 - `oauth_mode` enables runtime token exchange.
 - `auth_oauth_bearer` injects the resulting access token as a Bearer token.
+
+### Google Service Account Files
+
+Use `google_service_account_file` for Vertex AI or other Google Cloud APIs that need a signed JWT bearer assertion. The active upstream key supplies the credential file path through `keys.yaml`.
+
+```nginx
+auth {
+  oauth_mode google_service_account_file;
+  oauth_scope "https://www.googleapis.com/auth/cloud-platform";
+  auth_oauth_bearer;
+}
+```
+
+```yaml
+providers:
+  vertex:
+    keys:
+      - name: "vertex-sa"
+        credential_file: "/etc/onr/gcp/vertex-sa.json"
+        location: "global"
+```
+
+ONR reads the service account JSON, signs the assertion locally, exchanges it for a short-lived access token, caches the token, and injects `Authorization: Bearer <access-token>`.
 
 ### Custom OAuth Parameters
 

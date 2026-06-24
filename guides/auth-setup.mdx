@@ -48,6 +48,30 @@ auth {
 }
 ```
 
+### Vertex AI Service Account Files
+
+For Vertex AI, configure the provider DSL to use Google service account OAuth and configure the actual file path in `keys.yaml`.
+
+```nginx
+auth {
+  oauth_mode google_service_account_file;
+  oauth_scope "https://www.googleapis.com/auth/cloud-platform";
+  auth_oauth_bearer;
+}
+```
+
+```yaml
+providers:
+  vertex:
+    keys:
+      - name: "vertex-sa"
+        credential_file: "/etc/onr/gcp/vertex-sa.json"
+        location: "us-central1"
+        base_url_override: "https://us-central1-aiplatform.googleapis.com"
+```
+
+The DSL can then use `$credential.project_id` and `$channel.location` when constructing Vertex paths.
+
 ### Custom OAuth Configurations
 If you are integrating with a proprietary corporate SSO or an unsupported provider, you can define the entire OAuth workflow. ONR will automatically execute the exchange, cache the token, and handle refresh skews.
 

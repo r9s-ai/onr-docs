@@ -24,6 +24,15 @@ providers:
     keys:
       - name: "haiku-cluster"
         value: "sk-ant-... "
+
+  vertex:
+    keys:
+      - name: "vertex-sa"
+        # GCP Vertex AI uses a service account JSON file instead of an API key.
+        credential_file: "/etc/onr/gcp/vertex-sa.json"
+        location: "global"
+        # Use this explicitly for regional Vertex endpoints.
+        # base_url_override: "https://us-central1-aiplatform.googleapis.com"
 ```
 
 To avoid committing sensitive keys to version control, **providing an empty value allows environment variables to fulfill them.**
@@ -33,6 +42,24 @@ To avoid committing sensitive keys to version control, **providing an empty valu
 ONR automatically maps `keys.yaml` entries to environment variables.
 - Using a named key: `ONR_UPSTREAM_KEY_<PROVIDER>_<NAME>`
 - E.g., `ONR_UPSTREAM_KEY_ANTHROPIC_HAIKU_CLUSTER=sk-ant-1234 onr run -c onr.yaml`
+
+### Vertex AI Service Account Files
+
+For Vertex AI, a provider key can omit `value` and use a local Google service account JSON file:
+
+```yaml
+providers:
+  vertex:
+    keys:
+      - name: "vertex-sa"
+        credential_file: "/etc/onr/gcp/vertex-sa.json"
+        location: "us-central1"
+        base_url_override: "https://us-central1-aiplatform.googleapis.com"
+```
+
+- `credential_file` points to a Google service account JSON file. Keep this file readable only by the ONR runtime user, for example `chmod 600 /etc/onr/gcp/vertex-sa.json`.
+- `location` is exposed to DSL expressions as `$channel.location` and defaults to `global` when `credential_file` is set.
+- `base_url_override` is optional, but should be set when you want a regional Vertex host such as `https://us-central1-aiplatform.googleapis.com`.
 
 ---
 
