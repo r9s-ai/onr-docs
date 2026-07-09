@@ -53,6 +53,35 @@ request {
 - `json_set` values support primitives (`true`, `false`, `null`, integers, strings) or expressions (like `concat(...)`).
 - `json_wrap_input_text` converts a string field into an OpenAI Responses `input` message list, leaves missing or already-array values unchanged, and rejects other types.
 
+## Request Validation
+
+Use `req_*` rules to reject malformed client requests with HTTP 400 before they reach the upstream provider.
+
+```nginx
+request {
+  req_required body "$.model";
+  req_required body "$.messages";
+  req_type body "$.messages" array;
+  req_len body "$.messages" min=1 max=256;
+
+  req_type body "$.temperature" number;
+  req_range body "$.temperature" min=0 max=2;
+
+  req_enum body "$.reasoning_effort" "low" "medium" "high";
+  req_forbid body "$.legacy_field";
+
+  req_required header "anthropic-beta";
+  req_enum query "api-version" "2024-06-01" "2024-10-21";
+}
+```
+
+- `<source>` is `body`, `header`, or `query`. Body targets use object-path (`$.a.b.c`, no array indices); header/query targets use the parameter name.
+- Rules run after `model_map` (a `$.model` rule sees the mapped model name) and before JSON mutations and `req_map`, in DSL order — `defaults.request` rules first, then matched `match.request` rules. The first failure stops validation and returns 400 with `code=request_validation_failed`.
+- `req_required` fails when the target is missing; JSON `null` counts as missing unless `allow_null=true` (body only). `req_forbid` fails when the target is present. All other rules are no-ops for missing targets.
+- `req_type` (body only) checks `null|bool|number|integer|string|array|object`. `req_range` checks numeric bounds; `req_len` checks string length (Unicode code points) or array length. `req_enum` compares body values as JSON literals and header/query values as strings.
+- If any `body` rule is configured and the request has no JSON object body, the request is rejected; use only header/query rules for non-JSON APIs.
+- Error messages never include the actual field value.
+
 ## Structural Request Mapping
 
 Use `req_map` to apply heavy, cross-provider schema transformations (such as converting an OpenAI JSON request into a Gemini or Anthropic JSON request).
