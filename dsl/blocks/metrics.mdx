@@ -116,6 +116,7 @@ Use `usage_root` first when the upstream response has a nested usage object and 
 ```nginx
 metrics {
   usage_root path="$.usage";
+  usage_root path="$.message.usage" event="message_start" event_optional=true exclude="output_tokens";
 
   usage_fact input token path="$.input_tokens";
   usage_fact output token path="$.output_tokens";
@@ -131,6 +132,7 @@ metrics {
 - Multiple `usage_root` rules merge into one usage object; later non-zero fields can fill or replace earlier zero fields.
 - In stream extraction, ONR merges usage roots from chunks first, then runs default-source / `source=usage` facts once at stream end. Explicit `source=response`, `request`, and `derived` facts still run during chunk processing.
 - `event="a|b"` can restrict `usage_root` or `usage_fact` to specific SSE event names.
+- `exclude="field_a|field_b"` removes top-level fields from the extracted usage object before it is merged. It does not accept JSONPath or nested paths.
 - `path`, `count_path`, `sum_path`, and `expr` are supported.
 - String values may use either double quotes or single quotes.
 - `count_path` can be combined with `type` and `status` filters.
