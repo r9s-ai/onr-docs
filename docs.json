@@ -53,6 +53,14 @@
             ]
           },
           {
+            "group": "Updates",
+            "icon": "rss",
+            "expanded": false,
+            "pages": [
+              "changelog"
+            ]
+          },
+          {
             "group": "Guides & Cookbooks",
             "icon": "book-open-reader",
             "expanded": false,
