@@ -35,6 +35,61 @@ request {
 - Exact match on the `from` string.
 - If no matches occur, `model_map_default` dictates what `$request.model_mapped` becomes.
 
+## Request Validation
+
+Reject a request before it reaches the upstream. Validation runs after
+`model_map` and before every JSON mutation, so a rule always sees the
+parameters as the client sent them.
+
+```nginx
+request {
+  req_required body "$.prompt";
+  req_len      body "$.prompt" max=1500;
+  req_range    body "$.n" min=1 max=9;
+  req_enum     body "$.response_format" "url" "b64_json";
+}
+```
+
+Each directive takes a source — `body`, `header` or `query` — followed by a
+JSON path (body) or a parameter name (header, query).
+
+| Directive | Rejects when |
+| --- | --- |
+| `req_required <source> <path-or-name> [allow_null=true\|false]` | the target is absent. A JSON `null` counts as absent unless `allow_null=true`. |
+| `req_forbid <source> <path-or-name>` | the target is present. |
+| `req_type body <jsonpath> <type>` | the field exists but is not of the given JSON type: `null`, `bool`, `number`, `integer`, `string`, `array` or `object`. Body source only. |
+| `req_range <source> <path-or-name> [min=<number>] [max=<number>]` | the number falls outside the range. At least one bound is required. |
+| `req_len <source> <path-or-name> [min=<int>] [max=<int>]` | the string or array length falls outside the range. At least one bound is required. |
+| `req_enum <source> <path-or-name> <value>...` | the value is not one of the listed candidates. |
+
+Behaviour worth planning around:
+
+- **Absent targets pass every rule except `req_required`.** Use `req_required`
+  to demand presence and the others to constrain a value that is there. This is
+  what lets a `req_map` mode supply defaults for the fields a caller omitted.
+- **`req_len` counts Unicode code points, not bytes**, so a limit expressed in
+  characters holds for any script. Arrays are measured by element count; any
+  other type is rejected.
+- **`req_range` also accepts numeric strings**, which is what makes it usable
+  against `header` and `query` sources.
+- **`req_enum` compares typed JSON literals for `body`** — `"1"` and `1` are
+  different candidates — while `header` and `query` values compare as strings.
+- A `body` rule against a request that is not a JSON object is a failure in
+  itself, not a silently skipped rule.
+
+A failed rule returns **HTTP 400** with the failing path in `param`:
+
+```json
+{
+  "error": {
+    "message": "request validation failed: $.n must be between 1 and 9",
+    "type": "invalid_request_error",
+    "code": "request_validation_failed",
+    "param": "$.n"
+  }
+}
+```
+
 ## JSON Mutations
 
 Apply lightweight mutations directly to the upstream JSON body.
