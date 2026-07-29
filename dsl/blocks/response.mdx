@@ -32,6 +32,19 @@ response {
 - `gemini_to_openai_chat`
 - `openai_responses_to_openai_chat`
 - `openai_to_gemini_chat`
+- `openai_to_gemini_generate_content` — alias of `openai_to_gemini_chat`
+
+For image responses (`images.generations`), which carry pictures rather than
+message content:
+
+- `gemini_to_openai_images` — Gemini `generateContent` to an OpenAI image response. Extracts inline image data into `data[].b64_json` and maps `usageMetadata` to `usage`.
+- `minimax_image_to_openai_images` — Minimax `/v1/image_generation` to an OpenAI image response. Flattens Minimax's `data` object, which holds parallel `image_urls` and `image_base64` arrays, into OpenAI's array of per-image objects.
+
+Both image mappers treat a response carrying no image as an error rather than
+returning a success body with an empty `data` array, so a caller always sees a
+failure when no picture was produced. `minimax_image_to_openai_images` also
+reports a business failure delivered inside an HTTP 200 (`base_resp.status_code`
+other than `0`) as an error, passing Minimax's own message through.
 
 ### Server-Sent Events (Streaming)
 

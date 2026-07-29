@@ -79,8 +79,20 @@ request {
 
 ### Built-in Modes (v0.1)
 
+Chat requests:
+
 - `openai_chat_to_openai_responses`
 - `anthropic_to_openai_chat`
 - `gemini_to_openai_chat`
 - `openai_chat_to_gemini_generate_content`
 - `openai_chat_to_anthropic_messages`
+
+Image requests (`images.generations`):
+
+- `openai_images_to_gemini_generate_content` — OpenAI image request to Gemini `generateContent` (Nano Banana). Maps `prompt` and `n`; on gemini-3 models also maps `size` to an aspect ratio and `quality` to a pixel size, and requests `TEXT` and `IMAGE` response modalities.
+- `openai_images_to_minimax_image` — OpenAI image request to Minimax `/v1/image_generation`. Maps `size` to `aspect_ratio` or `width`/`height`, and `response_format=b64_json` to Minimax's `base64`.
+
+Both image mappers reject requests the target provider cannot serve. They cover
+only the provider-specific rules, so generic bounds are expressed with the
+request validation directives — `req_required` for `prompt`, `req_len` for its
+length, `req_range` for `n`, `req_enum` for `response_format`.
