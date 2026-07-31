@@ -7,7 +7,7 @@ The `request` block enables you to perform lightweight transformations on the pa
 
 ## Header Operations
 
-You can arbitrarily set or delete HTTP headers going to the upstream server.
+You can arbitrarily set, delete, or filter HTTP headers going to the upstream server.
 
 ```nginx
 request {
@@ -15,9 +15,47 @@ request {
   set_header "x-foo" concat("a-", $request.model_mapped);
   
   del_header "x-remove-me";
+
+  # Remove specific values from a header (denylist)
+  filter_header_values "anthropic-beta" "context-1m-*";
+
+  # Keep only specific values in a header (allowlist)
+  keep_header_values "anthropic-beta" "computer-use-*" "context-management-*";
 }
 ```
-*Note: If the same header is set multiple times, the last one wins. Deletions apply in order.*
+*Note: If the same header is set multiple times, the last one wins. Deletions and filter/keep operations apply in order.*
+
+### filter_header_values
+
+Removes header value items that match any of the given patterns (denylist). Non-matching items are kept.
+
+```nginx
+request {
+  filter_header_values "anthropic-beta" "context-1m-*" "fast-mode-*";
+  filter_header_values "x-feature-flags" "exp-*" "debug" separator=";";
+}
+```
+
+- Syntax: `filter_header_values <header> <pattern>... [separator="<sep>"];`
+- Default separator is `,`. Output is normalized (`", "` for comma, `"<sep> "` for others).
+- Pattern matching supports `*` wildcards; case-insensitive is not applied (patterns must match the exact case used by the client).
+- If all values are removed, the header is deleted.
+
+### keep_header_values
+
+Keeps only header value items that match any of the given patterns (allowlist). Non-matching items are removed.
+
+```nginx
+request {
+  keep_header_values "anthropic-beta" "computer-use-*" "context-management-*";
+  keep_header_values "x-feature-flags" "stable-*" separator=";";
+}
+```
+
+- Syntax: `keep_header_values <header> <pattern>... [separator="<sep>"];`
+- Mirror of `filter_header_values` with inverted logic: patterns select what to **keep**.
+- Same separator and output formatting rules as `filter_header_values`.
+- If no values match, the header is deleted.
 
 ## Model Mapping
 
@@ -47,11 +85,19 @@ request {
   json_rename "$.max_tokens" "$.max_completion_tokens";
   json_wrap_input_text "$.input";
   json_del "$.tools";
+
+  # Populate a JSON array from a downstream request header, then filter it
+  json_set_header_values "$.anthropic_beta" "anthropic-beta";
+  json_keep_values "$.anthropic_beta" "computer-use-*" "context-management-*";
+  json_filter_values "$.anthropic_beta" "context-1m-*";
 }
 ```
 - Supports a subset of object-path JSONPath expressions (e.g. `$.a.b.c`).
 - `json_set` values support primitives (`true`, `false`, `null`, integers, strings) or expressions (like `concat(...)`).
 - `json_wrap_input_text` converts a string field into an OpenAI Responses `input` message list, leaves missing or already-array values unchanged, and rejects other types.
+- `json_keep_values` filters a JSON string array, **keeping only** values that match any pattern (allowlist). Use after `json_set_header_values` to restrict a header-sourced array to a known-safe set.
+- `json_filter_values` filters a JSON string array, **removing** values that match any pattern (denylist).
+- Both `json_keep_values` and `json_filter_values` support `*` wildcards, are case-insensitive, and delete the field if no values remain.
 
 ## Structural Request Mapping
 
