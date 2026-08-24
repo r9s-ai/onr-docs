@@ -69,7 +69,8 @@
               "guides/auth-setup",
               "guides/request-response-rewriting",
               "guides/logging-masking",
-              "guides/client-attribution"
+              "guides/client-attribution",
+              "guides/meterry-billing"
             ]
           },
           {

@@ -1,0 +1,310 @@
+---
+title: "Meterry Billing Integration"
+description: "Send ONR model usage, dynamic pricing, and access-key subjects to Meterry."
+---
+
+This guide explains how to connect Open Next Router (ONR) to Meterry for usage collection, asynchronous ingestion, dynamic pricing, and Usage Explorer queries.
+
+ONR uses asynchronous billing: it completes the model request first, appends a billing event to a local outbox, and lets a background worker deliver the event to Meterry. A temporary Meterry outage does not change a response that has already been returned to the client.
+
+## Architecture and responsibilities
+
+ONR is responsible for:
+
+- extracting upstream usage according to the provider DSL;
+- estimating usage when the upstream does not return it;
+- calculating request-level prices from ONR pricing files;
+- mapping an access key to a Meterry subject;
+- persisting events in an outbox and retrying delivery.
+
+Meterry is responsible for:
+
+- extractor rule-set field extraction;
+- charge-item metering and pricing;
+- accounts, wallets, subject routes, and usage limits;
+- usage events, billing, and aggregate queries.
+
+ONR does not send prompts, `Authorization` headers, upstream API keys, or traffic dumps to Meterry.
+
+## 1. Prepare the Meterry project
+
+### Use the correct API host
+
+The portal and API use different hosts:
+
+```text
+Portal: https://meterry.com
+API:    https://api.meterry.com
+```
+
+`ONR_METERRY_BASE_URL` must point to the API host:
+
+```bash
+export ONR_METERRY_BASE_URL="https://api.meterry.com"
+```
+
+Using `https://meterry.com` for ingest returns an HTML `404` page.
+
+### Create and publish an extractor rule set
+
+Create an extractor rule set in the project's Rules page and publish it before ingesting events. A draft rule returns `extractor rule set is not published`.
+
+ONR emits these normalized usage fields:
+
+```json
+{
+  "usage": {
+    "input_tokens": 2400,
+    "output_tokens": 520,
+    "total_tokens": 2920,
+    "cache_read_tokens": 800
+  }
+}
+```
+
+For OpenAI-compatible rules, ONR also emits these aliases:
+
+```json
+{
+  "usage": {
+    "prompt_tokens": 2400,
+    "completion_tokens": 520,
+    "cached_tokens": 800
+  }
+}
+```
+
+A rule set should extract at least:
+
+```text
+$.usage.input_tokens  -> input_tokens
+$.usage.output_tokens -> output_tokens
+$.usage.cached_tokens -> cache_read_tokens (optional)
+$.meta.subject_type   -> subject type
+$.meta.subject_id     -> subject id
+$.provider            -> provider dimension
+$.model               -> model dimension
+$.api                 -> api dimension (optional)
+```
+
+If you use Meterry's OpenAI-compatible rule, charge-item metrics are normally `prompt_tokens` and `completion_tokens`; these are the metric names used by ONR's `x-billing.items`.
+
+### Use a dynamic amount expression
+
+Token charge items must calculate their amount from quantity and price. Do not leave `amount_expr` fixed at zero:
+
+```text
+dec_mul(
+  dec_div(dec(item['quantity']), dec(item['pricing_unit'])),
+  dec(item['unit_price'])
+)
+```
+
+A fixed zero expression records token quantities but always produces an amount of zero.
+
+### Configure the subject
+
+By default, ONR uses the access-key name as the billing subject:
+
+```text
+subject_type = api_key
+subject_id   = <ONR access-key name>
+```
+
+For example:
+
+```yaml
+access_keys:
+  - name: client-a
+    value: client-a-secret
+```
+
+The event contains:
+
+```json
+{
+  "subject_type": "api_key",
+  "subject_id": "client-a"
+}
+```
+
+Meterry account, wallet, and subject-route configuration must use the same subject type and ID.
+
+## 2. Configure ONR
+
+Keep credentials in `.env` or the deployment environment; do not commit them to Git:
+
+```bash
+export ONR_METERRY_ENABLED=true
+export ONR_METERRY_BASE_URL="https://api.meterry.com"
+export ONR_METERRY_PROJECT_ID="proj_example"
+export ONR_METERRY_API_KEY="<project-api-key>"
+export ONR_METERRY_EXTRACTOR_RULE_SET_ID="ers_example"
+```
+
+Enable Meterry in `onr.yaml`:
+
+```yaml
+meterry:
+  enabled: true
+  outbox_dir: "./run/meterry"
+  request_timeout_ms: 3000
+  retry_interval_ms: 1000
+  only_billable_success: true
+  subject_type: "api_key"
+  fallback_subject_id: ""
+```
+
+`only_billable_success: true` reports only 2xx model requests. `outbox_dir` stores pending JSONL events, while the timeout and retry settings control delivery. `fallback_subject_id` is used for master-key requests or requests without a matching access key.
+
+Validate the configuration and start ONR:
+
+```bash
+go run ./cmd/onr -t onr.yaml
+
+set -a
+source .env
+set +a
+go run ./cmd/onr -c onr.yaml
+```
+
+## 3. Event shape
+
+ONR sends events to:
+
+```text
+POST /v1/projects/:project_id/extractor-rule-sets/:rule_set_id/events/ingest
+```
+
+An event is shaped like this:
+
+```json
+{
+  "source": "open-next-router",
+  "external_event_id": "onr-request-001",
+  "idempotency_key": "onr:onr-request-001",
+  "occurred_at": 1787475449,
+  "subject_type": "api_key",
+  "subject_id": "client-a",
+  "raw_json": {
+    "provider": "openai",
+    "api": "chat.completions",
+    "model": "gpt-4o-mini",
+    "stream": false,
+    "status": 200,
+    "usage_stage": "upstream",
+    "usage": {
+      "input_tokens": 2400,
+      "output_tokens": 520,
+      "total_tokens": 2920,
+      "prompt_tokens": 2400,
+      "completion_tokens": 520
+    },
+    "meta": {
+      "subject_type": "api_key",
+      "subject_id": "client-a",
+      "request_id": "onr-request-001"
+    }
+  },
+  "x-billing": {
+    "items": [
+      {"metric": "prompt_tokens", "quantity": 2400, "unit": "token"},
+      {"metric": "completion_tokens", "quantity": 520, "unit": "token"}
+    ],
+    "pricing_hints": {
+      "prompt_tokens": {"unit_price": 0.75, "pricing_unit": 1000000, "currency": "USD"},
+      "completion_tokens": {"unit_price": 3.0, "pricing_unit": 1000000, "currency": "USD"}
+    }
+  }
+}
+```
+
+`x-billing.items` makes the runtime token quantities the charge-item source of truth. `x-billing.pricing_hints` carries the provider/model/channel pricing calculated by ONR to Meterry.
+
+## 4. Delivery, retries, and idempotency
+
+The delivery flow is:
+
+```text
+Model response completes
+    -> build usage event
+    -> append run/meterry/events.jsonl
+    -> background worker calls Meterry ingest
+    -> receive 2xx/202
+    -> remove the acknowledged event from the outbox
+```
+
+The idempotency key is `onr:<request_id>`. Failed events remain in the outbox and are retried, including after a process restart. Keep the same request ID on retries; generating a new one creates duplicate billing events.
+
+## 5. Verify a real ingest
+
+Use a fixed request ID for a smoke test:
+
+```bash
+curl http://127.0.0.1:3300/v1/chat/completions \
+  -H "Authorization: Bearer client-a-secret" \
+  -H "Content-Type: application/json" \
+  -H "X-Onr-Request-Id: onr-meterry-check-001" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "billing smoke test"}],
+    "stream": false
+  }'
+```
+
+Check the outbox:
+
+```bash
+wc -c ./run/meterry/events.jsonl
+```
+
+After successful delivery, the file should be empty or absent. Query event details through the Meterry API:
+
+```bash
+curl "$ONR_METERRY_BASE_URL/v1/projects/$ONR_METERRY_PROJECT_ID/usage/events/details?limit=20" \
+  -H "Authorization: Bearer $ONR_METERRY_API_KEY"
+```
+
+Verify `external_event_id`, subject fields, token metrics, amount, unit price, `raw_event_id`, and `usage_event_id`.
+
+## 6. Usage Explorer queries
+
+Summary queries grouped by metric require an explicit `metric`; otherwise Usage Explorer reports:
+
+```text
+invalid usage query: metric or metrics is required for metric measures
+```
+
+Use a filter such as:
+
+```text
+metric=prompt_tokens; provider=openai; model=gpt-4o-mini
+```
+
+The model value is `gpt-4o-mini`, not `gpt_4o_mini`. Use Events to inspect individual records and Summary with a metric to inspect aggregate amounts.
+
+## 7. Troubleshooting
+
+### HTML 404 from the API
+
+Set the base URL to `https://api.meterry.com`, not the portal URL.
+
+### `extractor rule set is not published`
+
+Publish the extractor rule set from the project's Rules page.
+
+### Event accepted but Usage Explorer is empty
+
+Check that the rule is published, subject fields are present and routed, rule paths match `raw_json`, charge-item metrics match `x-billing.items`, the query specifies a metric, and the time range covers `occurred_at`.
+
+### Token quantity exists but amount is zero
+
+Replace a fixed `dec('0')` amount expression with the dynamic `quantity / pricing_unit * unit_price` expression shown above.
+
+### Outbox never drains
+
+Check the API host, project/API-key/rule-set consistency, published status, the API key's `usage:ingest` scope, and network access from the ONR process.
+
+## Limitations
+
+The first integration phase supports asynchronous ingest only. It does not yet include Meterry webhooks, pre-request balance checks, local blocking after usage limits are exhausted, or ONR management commands for Meterry accounts, wallets, and subject routes.
