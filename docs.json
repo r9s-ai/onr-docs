@@ -70,7 +70,8 @@
               "guides/request-response-rewriting",
               "guides/logging-masking",
               "guides/client-attribution",
-              "guides/meterry-billing"
+              "guides/meterry-billing",
+              "guides/distributed-deployment"
             ]
           },
           {

@@ -1,0 +1,225 @@
+---
+title: "Distributed Deployment with Redis"
+description: "Run multiple stateless ONR instances with shared access keys, billing events, and balance state."
+---
+
+This guide describes how to run Open Next Router (ONR) as a horizontally scaled, stateless service. Redis provides the shared control plane and runtime coordination; Meterry remains the only authority for usage rating, wallet debits, and account balances.
+
+## What is shared
+
+When Redis is enabled, ONR shares the following state across instances:
+
+- client access keys, their HMAC hashes, subjects, status, and expiry;
+- subject blocked state received from Meterry webhooks;
+- short-lived realtime balance decisions;
+- asynchronous Meterry usage events in a Redis Stream;
+- billing consumer-group pending entries, retry counters, and dead-letter events.
+
+Provider API keys, OAuth tokens, and cloud credentials are not moved to Redis. Keep them in `keys.yaml`, a secret manager, or deployment secrets on every instance.
+
+The request and billing flow is:
+
+```text
+load balancer
+    -> any ONR instance
+    -> Redis access-key and subject checks
+    -> provider request
+    -> Redis Stream usage event
+    -> any billing consumer
+    -> Meterry ingest, rating, and wallet debit
+    -> Meterry webhook
+    -> Redis blocked state and balance-cache invalidation
+```
+
+## Prerequisites
+
+Prepare:
+
+1. A highly available Redis deployment reachable by every ONR instance. A managed primary/replica service or a Redis-compatible proxy is recommended.
+2. A Meterry project, published extractor rule set, project API key, and webhook signing secret.
+3. The same ONR configuration files and provider secrets on every instance.
+4. A load balancer that can route requests to any healthy instance.
+
+ONR currently uses one Redis endpoint and `go-redis/v9`. Redis Cluster-specific commands are not required; use a managed endpoint or proxy that exposes the configured endpoint.
+
+## Configure Redis
+
+Add the Redis block to `onr.yaml`:
+
+```yaml
+redis:
+  enabled: true
+  addr: "redis://redis.internal:6379/0"
+  username: ""
+  password: "${ONR_REDIS_PASSWORD}"
+  tls: true
+  key_prefix: "onr-prod"
+  operation_timeout_ms: 500
+  access_key_mode: "redis_preferred"
+  billing_stream: "meterry:events"
+  billing_consumer_group: "onr-billing"
+  billing_consumer_name: ""
+  billing_max_attempts: 10
+  access_key_hash_secret: "${ONR_ACCESS_KEY_HASH_SECRET}"
+```
+
+The secret values should normally be supplied through the environment rather than interpolated in a committed YAML file:
+
+```bash
+export ONR_REDIS_ENABLED=true
+export ONR_REDIS_ADDR="rediss://redis.internal:6380/0"
+export ONR_REDIS_PASSWORD="<redis-password>"
+export ONR_ACCESS_KEY_HASH_SECRET="<deployment-level-secret>"
+```
+
+`ONR_ACCESS_KEY_HASH_SECRET` must be the same on every ONR instance. Rotating it changes the hash of every Redis access key, so plan a coordinated migration before changing it.
+
+### Access-key lookup modes
+
+`redis_preferred` is the recommended migration mode:
+
+- look up a matching access key in Redis first;
+- if Redis has no matching key, fall back to `keys.yaml`;
+- if Redis is unavailable, fail closed and return an authentication-service error.
+
+Use `redis_only` after all client keys have been migrated. `file_only` disables Redis access-key lookup while leaving the Redis control plane available for billing and shared balance state.
+
+## Configure Meterry and webhooks
+
+Keep the Meterry project credentials in deployment secrets and configure the same project and extractor rule set on every instance:
+
+```yaml
+meterry:
+  enabled: true
+  base_url: "https://api.meterry.com"
+  project_id: "proj_example"
+  api_key: "${ONR_METERRY_API_KEY}"
+  extractor_rule_set_id: "ers_example"
+  outbox_dir: "./run/meterry" # used only when Redis is disabled
+  request_timeout_ms: 3000
+  retry_interval_ms: 1000
+  subject_type: "api_key"
+  balance_enforcement:
+    enabled: true
+    currency: "USD"
+    failure_mode: "closed"
+    request_timeout_ms: 1000
+    webhook_path: "/internal/meterry/webhook"
+    webhook_secret: "${ONR_METERRY_WEBHOOK_SECRET}"
+    timestamp_tolerance_s: 300
+```
+
+Configure Meterry to deliver these events to every instance or to a shared ingress endpoint that forwards to the cluster:
+
+```text
+POST https://onr.example.com/internal/meterry/webhook
+```
+
+The webhook signature is checked before processing. ONR deduplicates event IDs in Redis, updates the shared subject state, and invalidates the shared balance cache before returning a 2xx response.
+
+## Migrate access keys
+
+Redis stores only an HMAC-SHA256 hash. The plaintext secret is printed once during creation or rotation and is never written to Redis.
+
+Create a new key:
+
+```bash
+onr-admin access-key create \
+  --config onr.yaml \
+  --name client-a \
+  --subject-type api_key \
+  --subject-id client-a
+```
+
+Migrate existing keys from `keys.yaml` with a dry run first:
+
+```bash
+onr-admin access-key migrate \
+  --config onr.yaml \
+  --from ./keys.yaml \
+  --dry-run
+
+onr-admin access-key migrate \
+  --config onr.yaml \
+  --from ./keys.yaml
+```
+
+Inspect, revoke, or rotate a key:
+
+```bash
+onr-admin access-key list --config onr.yaml
+onr-admin access-key revoke --config onr.yaml --name client-a
+onr-admin access-key rotate --config onr.yaml --name client-a
+```
+
+After migration, keep `access_key_mode: redis_preferred` while validating the cluster. Switch to `redis_only` once all clients use the Redis-managed secrets.
+
+## Run multiple instances
+
+Every instance should use the same:
+
+- `redis.addr`, `key_prefix`, and `access_key_hash_secret`;
+- Meterry project, API key, and extractor rule set;
+- provider DSL and model configuration;
+- webhook path and signing secret.
+
+Set a unique billing consumer name per process. Leaving `billing_consumer_name` empty makes ONR generate one from the hostname and process ID. All consumers use the same group:
+
+```yaml
+redis:
+  billing_consumer_group: "onr-billing"
+  billing_consumer_name: "" # generated per instance
+```
+
+Start each instance with the same configuration and put them behind the load balancer:
+
+```bash
+go run ./cmd/onr -c onr.yaml
+```
+
+The Redis Stream consumer group ensures that a usage event is processed by one active consumer at a time. If an instance stops, another instance can reclaim its pending entries with `XAUTOCLAIM`. Meterry's `onr:<request_id>` idempotency key prevents duplicate billing when an event is retried or reclaimed.
+
+## Health checks and rollout
+
+Use `/healthz` for process liveness and `/readyz` for load-balancer readiness:
+
+```bash
+curl -fsS http://127.0.0.1:3300/healthz
+curl -fsS http://127.0.0.1:3300/readyz
+```
+
+`/readyz` reports:
+
+- Redis connectivity;
+- whether Meterry is configured;
+- billing pending-entry and dead-letter counts when the billing consumer is enabled.
+
+Remove an instance from the load balancer before stopping it. The billing worker is asynchronous; pending Stream entries can be reclaimed by another instance after the consumer's idle timeout.
+
+## Failure behavior
+
+| Failure | ONR behavior |
+| --- | --- |
+| Redis unavailable during access-key authentication | Fail closed with `503 authentication_unavailable` |
+| Redis subject-state read fails | Balance-controlled request is rejected according to the billing failure policy |
+| Redis balance-cache read fails | Query Meterry directly; errors are not cached |
+| Meterry balance query fails | `failure_mode: closed` rejects; `open` allows and logs a warning |
+| Redis Stream write fails after a model response | The completed response is preserved; the event failure is logged and observable |
+| Meterry ingest fails | Stream entry remains pending and is retried |
+| Retry limit is exceeded | Event is moved to the dead-letter Stream |
+
+Redis is a control plane and cache, not the balance ledger. Do not implement local wallet debits or reservations in ONR.
+
+## Verify the cluster
+
+Run these checks before production rollout:
+
+1. Create an access key on instance A and authenticate through instance B.
+2. Revoke the key on instance A and confirm instance B rejects it immediately.
+3. Send requests through both instances and confirm the Meterry Usage Explorer shows one event per `onr:<request_id>`.
+4. Stop the billing worker on one instance, enqueue a request, and confirm another instance reclaims and delivers the pending event.
+5. Send a signed `wallet.insufficient_balance` webhook and confirm both instances return `402 Payment Required` for the blocked subject.
+6. Credit the Meterry wallet, send `wallet.balance_changed`, and confirm requests succeed again.
+7. Check `/readyz` for Redis availability, pending entries, and dead-letter count.
+
+For a detailed Meterry rule and pricing setup, see [Meterry Billing Integration](/guides/meterry-billing).
