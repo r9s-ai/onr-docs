@@ -153,6 +153,14 @@ meterry:
   only_billable_success: true
   subject_type: "api_key"
   fallback_subject_id: ""
+  balance_enforcement:
+    enabled: true
+    currency: "USD"
+    failure_mode: "closed"
+    request_timeout_ms: 1000
+    webhook_path: "/internal/meterry/webhook"
+    webhook_secret: "<webhook-signing-secret>"
+    timestamp_tolerance_s: 300
 ```
 
 `only_billable_success: true` reports only 2xx model requests. `outbox_dir` stores pending JSONL events, while the timeout and retry settings control delivery. `fallback_subject_id` is used for master-key requests or requests without a matching access key.
@@ -267,7 +275,54 @@ curl "$ONR_METERRY_BASE_URL/v1/projects/$ONR_METERRY_PROJECT_ID/usage/events/det
 
 Verify `external_event_id`, subject fields, token metrics, amount, unit price, `raw_event_id`, and `usage_event_id`.
 
-## 6. Usage Explorer queries
+## 6. User wallet balance enforcement
+
+Meterry debits an account wallet when it processes a rated usage event. Keep account, wallet, credit, and subject-route management in the existing business backend:
+
+1. Create one Meterry account and USD wallet for each access key.
+2. Bind `api_key/<access-key-name>` to that account with a subject route.
+3. Credit the wallet through `POST /v1/projects/:project_id/wallets/credit`.
+4. Keep the ONR event subject unchanged so Meterry can resolve the payer wallet.
+
+When enabled, ONR performs a best-effort request pre-check:
+
+```text
+GET /v1/projects/:project_id/wallets/realtime/amount
+  ?subject_type=api_key
+  &subject_id=<access-key-name>
+  &currency=USD
+```
+
+When the returned balance is zero or negative, ONR returns `402 Payment Required` with an OpenAI-compatible error:
+
+```json
+{
+  "error": {
+    "message": "account balance is insufficient",
+    "type": "billing_error",
+    "code": "insufficient_balance"
+  }
+}
+```
+
+The pre-check does not reserve money. Meterry remains the only balance ledger and performs the final debit after asynchronous event processing. Concurrent requests can therefore briefly overspend a wallet.
+
+Balance lookup failures use `failure_mode: "closed"` by default and reject the request with `503`. Set `failure_mode: "open"` to allow requests while Meterry is unavailable. Requests without a mapped access-key subject, including master-key requests, bypass balance enforcement unless they are explicitly assigned a fallback subject.
+
+Configure the webhook endpoint at `POST /internal/meterry/webhook` in ONR and register the same URL in Meterry. ONR verifies the HMAC-SHA256 signature, rejects stale timestamps, deduplicates webhook IDs, and persists subject state for `wallet.insufficient_balance`, `wallet.balance_changed`, `wallet.available_balance.threshold_crossed`, and `usage_limit.exhausted`.
+
+Store `webhook_secret` in the deployment environment rather than committing it to Git:
+
+```bash
+export ONR_METERRY_BALANCE_ENABLED=true
+export ONR_METERRY_BALANCE_CURRENCY="USD"
+export ONR_METERRY_BALANCE_FAILURE_MODE="closed"
+export ONR_METERRY_BALANCE_REQUEST_TIMEOUT_MS=1000
+export ONR_METERRY_WEBHOOK_PATH="/internal/meterry/webhook"
+export ONR_METERRY_WEBHOOK_SECRET="<webhook-signing-secret>"
+```
+
+## 7. Usage Explorer queries
 
 Summary queries grouped by metric require an explicit `metric`; otherwise Usage Explorer reports:
 
@@ -283,7 +338,7 @@ metric=prompt_tokens; provider=openai; model=gpt-4o-mini
 
 The model value is `gpt-4o-mini`, not `gpt_4o_mini`. Use Events to inspect individual records and Summary with a metric to inspect aggregate amounts.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 ### HTML 404 from the API
 
@@ -305,6 +360,14 @@ Replace a fixed `dec('0')` amount expression with the dynamic `quantity / pricin
 
 Check the API host, project/API-key/rule-set consistency, published status, the API key's `usage:ingest` scope, and network access from the ONR process.
 
-## Limitations
+### Balance checks reject every request
 
-The first integration phase supports asynchronous ingest only. It does not yet include Meterry webhooks, pre-request balance checks, local blocking after usage limits are exhausted, or ONR management commands for Meterry accounts, wallets, and subject routes.
+Confirm the access key has a matching `api_key/<name>` subject route, the account has a USD wallet, the wallet balance is positive, and the configured project API key can read realtime wallet amounts.
+
+### Webhooks return 401
+
+Check that the raw request body is signed, the timestamp is within `timestamp_tolerance_s`, and `webhook_secret` exactly matches the secret configured for the Meterry webhook endpoint.
+
+## 9. Limitations
+
+ONR does not create Meterry accounts, wallets, subject routes, or credits. The balance pre-check is not a reservation and cannot prevent all concurrent overspend. Payment collection and wallet top-ups remain the responsibility of the existing business backend.
