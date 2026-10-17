@@ -152,10 +152,21 @@ request {
 - Only request JSON mutation directives are allowed inside `after_req_map`.
 - If no `req_map` is configured, `after_req_map` runs after the normal request JSON operations.
 
-### Built-in Modes (v0.1)
+### Built-in Modes
 
-- `openai_chat_to_openai_responses`
-- `anthropic_to_openai_chat`
-- `gemini_to_openai_chat`
-- `openai_chat_to_gemini_generate_content`
-- `openai_chat_to_anthropic_messages`
+**Chat / Completions**
+- `openai_chat_to_openai_responses` — OpenAI Chat → OpenAI Responses API
+- `openai_chat_to_anthropic_messages` — OpenAI Chat → Anthropic Messages
+- `openai_chat_to_gemini_generate_content` — OpenAI Chat → Gemini GenerateContent
+- `anthropic_to_openai_chat` — Anthropic Messages → OpenAI Chat
+- `gemini_to_openai_chat` — Gemini GenerateContent → OpenAI Chat
+
+**Images**
+- `openai_images_to_gemini_generate_content` — OpenAI Images → Gemini GenerateContent
+- `openai_images_edits_to_gemini_generate_content` — OpenAI Image Edits → Gemini GenerateContent
+- `openai_images_to_minimax_image` — OpenAI Images → Minimax Image
+- `openai_images_to_qwen_image` — OpenAI Images → Qwen Image
+
+**Videos**
+- `openai_videos_to_ppio` — OpenAI Videos → PPIO async task
+- `openai_videos_to_seedance` — OpenAI Videos → Volcengine Ark Seedance async task

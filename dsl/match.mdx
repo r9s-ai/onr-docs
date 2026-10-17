@@ -35,3 +35,12 @@ The `api` identifier is aligned with standard OpenAI-style endpoints (and specif
 - `audio.translations`
 - `gemini.generateContent` (Gemini native: `POST /v1beta/models/{model}:generateContent`)
 - `gemini.streamGenerateContent` (Gemini native: `POST /v1beta/models/{model}:streamGenerateContent?alt=sse`)
+- `gemini.predictLongRunning` (Gemini native long-running video prediction)
+- `gemini.getOperation` (Gemini native: poll a long-running operation)
+- `gemini.videoContent` (Gemini native: fetch completed video content)
+- `videos.get` (OpenAI-style async video task poll)
+- `videos.content` (OpenAI-style async video content fetch)
+- `videos.delete` (OpenAI-style async video task cancel/delete)
+- `seedance.videos.generations` (Volcengine Ark Seedance: `POST /api/v3/contents/generations/tasks`)
+- `seedance.videos.get` (Volcengine Ark Seedance: `GET /api/v3/contents/generations/tasks/{id}`)
+- `seedance.videos.delete` (Volcengine Ark Seedance: `DELETE /api/v3/contents/generations/tasks/{id}`)

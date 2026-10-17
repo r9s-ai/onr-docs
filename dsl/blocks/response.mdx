@@ -26,12 +26,22 @@ response {
   resp_map <mode>; 
 }
 ```
-*(Modes supported in v0.1)*:
-- `anthropic_to_openai_chat`
-- `openai_to_anthropic_messages`
-- `gemini_to_openai_chat`
-- `openai_responses_to_openai_chat`
-- `openai_to_gemini_chat`
+**Chat / Completions**
+- `anthropic_to_openai_chat` — Anthropic Messages → OpenAI Chat
+- `openai_to_anthropic_messages` — OpenAI Chat → Anthropic Messages
+- `gemini_to_openai_chat` — Gemini GenerateContent → OpenAI Chat
+- `openai_responses_to_openai_chat` — OpenAI Responses API → OpenAI Chat
+- `openai_to_gemini_chat` — OpenAI Chat → Gemini GenerateContent
+
+**Images**
+- `minimax_image_to_openai_images` — Minimax Image → OpenAI Images
+- `qwen_image_to_openai_images` — Qwen Image → OpenAI Images
+
+**Videos (async task lifecycle)**
+- `ppio_video_create_to_openai_videos` — PPIO task creation → OpenAI video object
+- `ppio_video_result_to_openai_videos` — PPIO task poll → OpenAI video object
+- `seedance_video_create_to_openai_videos` — Seedance task creation → OpenAI video object
+- `seedance_video_result_to_openai_videos` — Seedance task poll → OpenAI video object
 
 ### Server-Sent Events (Streaming)
 
